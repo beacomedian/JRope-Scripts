@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="e1329dea41f97e022411a2336638669c8989e407">
+<index version="1" name="JRope Scripts" commit="1283e053ce853fa9f4a48179fec2e79e9f5a7c44">
   <category name="Items">
     <reapack name="jrope_Add items after selected items on same track to selection.lua" type="script" desc="Add items after selected items on the same track to the selection">
       <metadata>
@@ -45,6 +45,23 @@
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/Various/jrope_Contextual%20mute.lua</source>
       </version>
     </reapack>
+    <reapack name="jrope_Play Toggle Half Speed.lua" type="script" desc="Play Toggle Half Speed and Reset Playrate on Stop">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Play at Half Speed or Toggle to Normal Speed if already playing, and Reset Playrate on Stop. Chose "New Instance" when retriggering.\par}
+}
+]]></description>
+        <link rel="website">https://www.stephenschappler.com</link>
+      </metadata>
+      <version name="1.1" author="Stephen Schappler (modified by Jesse Rope)" time="2025-02-28T18:20:24Z">
+        <changelog><![CDATA[7/30/24 Creating the script
+2/28/25 Modified to toggle playback speed if already playing]]></changelog>
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/1283e053ce853fa9f4a48179fec2e79e9f5a7c44/Various/jrope_Play%20Toggle%20Half%20Speed.lua</source>
+      </version>
+    </reapack>
   </category>
   <category name="View">
     <reapack name="jrope_Contextual zoom.lua" type="script" desc="Contextual Zoom">
@@ -57,11 +74,11 @@
     </reapack>
   </category>
   <metadata>
-    <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 Courier;}}
+    <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 \b \fs28 JRope Scripts\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 JRope Scripts\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 A collection of fragile scripts created by {\field{\*\fldinst{HYPERLINK "http://www.jesserope.com"}}{\fldrslt{\ul
 Jesse Rope
 }}}
