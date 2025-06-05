@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="13c27f76d36837c0de1f36a1540ae5c8f59a46c9">
+<index version="1" name="JRope Scripts" commit="9d0bcecee5321f7ef3c529ef6eebf41023d6be10">
+  <category name="Functions">
+    <reapack name="jrope__Common Functions.lua" type="script" desc="Jrope Common Functions">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="0.0" author="Jesse Rope" time="2025-06-05T19:02:58Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/9d0bcecee5321f7ef3c529ef6eebf41023d6be10/Functions/jrope__Common%20Functions.lua</source>
+      </version>
+    </reapack>
+  </category>
   <category name="FX">
     <reapack name="jrope_AM_Playdium_Load_Selected_Media_Items_into_RS5K_Multi.lua" type="script">
       <version name="1.0" author="Analogmad, MPL, JROPE" time="2025-06-05T16:38:08Z">
