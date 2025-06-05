@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="046533a6ced6af240a129efa8903bd9be412e44f">
+<index version="1" name="JRope Scripts" commit="7b57a8dea42d3b9768883d0bf932029fc923b999">
+  <category name="FX">
+    <reapack name="jrope_AM_Playdium_Load_Selected_Media_Items_into_RS5K_Multi.lua" type="script">
+      <version name="1.0" author="Analogmad, MPL, JROPE" time="2025-06-05T16:38:08Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/7b57a8dea42d3b9768883d0bf932029fc923b999/FX/jrope_AM_Playdium_Load_Selected_Media_Items_into_RS5K_Multi.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_AM_Playdium_Load_Selected_Media_Items_into_RS5K_NOGLUE_Multi.lua" type="script">
+      <version name="1.0" author="Analogmad, MPL, JROPE" time="2025-06-05T16:38:08Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/7b57a8dea42d3b9768883d0bf932029fc923b999/FX/jrope_AM_Playdium_Load_Selected_Media_Items_into_RS5K_NOGLUE_Multi.lua</source>
+      </version>
+    </reapack>
+  </category>
   <category name="Items">
     <reapack name="jrope_Add items after selected items on same track to selection.lua" type="script" desc="Add items after selected items on the same track to the selection">
       <metadata>
@@ -33,6 +45,16 @@
       </metadata>
       <version name="1.0" author="Jesse Rope + ChatGPT" time="2024-09-15T01:59:42Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/Markers%20and%20Regions/jrope_Rename%20markers%20and%20regions%20within%20time%20selection.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="Tracks">
+    <reapack name="jrope_Select First Track Visible in TCP.lua" type="script" desc="Select First Track Visible in TCP">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2025-06-05T16:38:08Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/7b57a8dea42d3b9768883d0bf932029fc923b999/Tracks/jrope_Select%20First%20Track%20Visible%20in%20TCP.lua</source>
       </version>
     </reapack>
   </category>
