@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="1e0b4048b049f1cdcafdb12864a3222421df606b">
+<index version="1" name="JRope Scripts" commit="13c27f76d36837c0de1f36a1540ae5c8f59a46c9">
   <category name="FX">
     <reapack name="jrope_AM_Playdium_Load_Selected_Media_Items_into_RS5K_Multi.lua" type="script">
       <version name="1.0" author="Analogmad, MPL, JROPE" time="2025-06-05T16:38:08Z">
@@ -29,12 +29,31 @@
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/Items/jrope_Group%20items%20by%20track.lua</source>
       </version>
     </reapack>
+    <reapack name="jrope_mpl_Snap selected items to each other - multi track.lua" type="script" desc="Snap selected items to each other (Multi-track)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 modification of "mpl_Snap selected items to each other to work across multiple tracks" to work across multiple tracks of selected items\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.2" author="MPL (Modified by JRope)" time="2025-06-05T19:00:25Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/13c27f76d36837c0de1f36a1540ae5c8f59a46c9/Items/jrope_mpl_Snap%20selected%20items%20to%20each%20other%20-%20multi%20track.lua</source>
+      </version>
+    </reapack>
     <reapack name="jrope_Select items after selected items on same track.lua" type="script" desc="Select items after selected items on same track">
       <metadata>
         <link rel="website">https://www.jesserope.com</link>
       </metadata>
       <version name="1.0" author="Jesse Rope" time="2024-09-15T01:59:42Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/Items/jrope_Select%20items%20after%20selected%20items%20on%20same%20track.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_X-Raym_Align selected items across tracks by right edge.lua" type="script" desc="Align selected items across tracks by right edge">
+      <version name="1.0 (right edge alignment)" author="X-Raym (Modified by jrope)" time="2025-06-05T19:00:25Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/13c27f76d36837c0de1f36a1540ae5c8f59a46c9/Items/jrope_X-Raym_Align%20selected%20items%20across%20tracks%20by%20right%20edge.lua</source>
       </version>
     </reapack>
   </category>
