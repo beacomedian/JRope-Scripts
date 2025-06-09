@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="9d0bcecee5321f7ef3c529ef6eebf41023d6be10">
+<index version="1" name="JRope Scripts" commit="8ec51996057dec1c24f569ca63331235095e9473">
   <category name="Functions">
     <reapack name="jrope__Common Functions.lua" type="script" desc="Jrope Common Functions">
       <metadata>
@@ -31,12 +31,12 @@
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/Items/jrope_Add%20items%20after%20selected%20items%20on%20same%20track%20to%20selection.lua</source>
       </version>
     </reapack>
-    <reapack name="jrope_Group items by track.lua" type="script" desc="Group items by track">
+    <reapack name="jrope_Group items horizontally by track.lua" type="script" desc="Group items horizontally by track">
       <metadata>
         <link rel="website">https://www.jesserope.com</link>
       </metadata>
-      <version name="1.0" author="Jesse Rope" time="2024-09-15T01:59:42Z">
-        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/Items/jrope_Group%20items%20by%20track.lua</source>
+      <version name="1.1" author="Jesse Rope" time="2025-06-09T19:50:15Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/4c670a99ee74fd997000caf7ba65720e7e5548b2/Items/jrope_Group%20items%20horizontally%20by%20track.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_mpl_Snap selected items to each other - multi track.lua" type="script" desc="Snap selected items to each other (Multi-track)">
@@ -59,6 +59,38 @@
       </metadata>
       <version name="1.0" author="Jesse Rope" time="2024-09-15T01:59:42Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/Items/jrope_Select%20items%20after%20selected%20items%20on%20same%20track.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Sort Selected Items By Color and Mute Status - Maintaining Position.lua" type="script" desc="Rearrange Selected Item Position Based on Color and Mute State, maintaining original spacing/positions">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Original script by Stephen Schappler 'Rearrange Selected Item Position Based on Color'\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.1" author="Stephen Schappler (Modified by JRope)" time="2025-06-09T20:16:04Z">
+        <changelog><![CDATA[8/30/24 v1.0 - Creating the script
+4/17/25 v1.1 - Modified to handle items on separate tracks independently, preserve original item spacing, move muted items to the end]]></changelog>
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/8ec51996057dec1c24f569ca63331235095e9473/Items/jrope_Sort%20Selected%20Items%20By%20Color%20and%20Mute%20Status%20-%20Maintaining%20Position.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Sort Selected Items By Color and Mute Status.lua" type="script" desc="Rearrange Selected Item Position Based on Color and Mute State">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Original script by Stephen Schappler 'Rearrange Selected Item Position Based on Color'\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.1" author="Stephen Schappler (Modified by JRope)" time="2025-06-09T20:16:04Z">
+        <changelog><![CDATA[8/30/24 v1.0 - Creating the script
+4/17/25 v1.1 - Modified to handle items on separate tracks independently, and move muted items to the end]]></changelog>
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/8ec51996057dec1c24f569ca63331235095e9473/Items/jrope_Sort%20Selected%20Items%20By%20Color%20and%20Mute%20Status.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_X-Raym_Align selected items across tracks by right edge.lua" type="script" desc="Align selected items across tracks by right edge">
@@ -128,6 +160,14 @@
     </reapack>
   </category>
   <category name="Tracks">
+    <reapack name="jrope_Create New Named Folder Track for Each Selected Track.lua" type="script" desc="Create New Named FOlder Track for Each Selected Track">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2025-06-09T20:16:04Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/8ec51996057dec1c24f569ca63331235095e9473/Tracks/jrope_Create%20New%20Named%20Folder%20Track%20for%20Each%20Selected%20Track.lua</source>
+      </version>
+    </reapack>
     <reapack name="jrope_Select First Track Visible in TCP.lua" type="script" desc="Select First Track Visible in TCP">
       <metadata>
         <link rel="website">https://www.jesserope.com</link>
