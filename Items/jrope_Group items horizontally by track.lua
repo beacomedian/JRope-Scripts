@@ -1,10 +1,10 @@
 --[[
- * Name: Group items by track
+ * Name: Group items horizontally by track
  * Author: Jesse Rope
  * Repository: github.com/beacomedian/JRope-Scripts
  * Licence: GPL v3
  * REAPER: 7.0
- * Version: 1.0
+ * Version: 1.1
  * Provides:
     [main] . > 
  * Link: https://www.jesserope.com
@@ -16,6 +16,7 @@
 
  * Changelog:
     # Initial Release
+    # Renamed to add 'horizontally' because that's what I kept searching for
 
 ]]
 
