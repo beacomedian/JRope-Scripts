@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="8ec51996057dec1c24f569ca63331235095e9473">
+<index version="1" name="JRope Scripts" commit="48356e5b3be9b1a7e5645df5f90348e16437ef10">
   <category name="Functions">
     <reapack name="jrope__Common Functions.lua" type="script" desc="Jrope Common Functions">
       <metadata>
@@ -160,6 +160,14 @@
     </reapack>
   </category>
   <category name="Tracks">
+    <reapack name="jrope_Copy selected track names to clipboard.lua" type="script" desc="Copy selected track names to clipboard">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2025-06-09T20:47:55Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/48356e5b3be9b1a7e5645df5f90348e16437ef10/Tracks/jrope_Copy%20selected%20track%20names%20to%20clipboard.lua</source>
+      </version>
+    </reapack>
     <reapack name="jrope_Create New Named Folder Track for Each Selected Track.lua" type="script" desc="Create New Named FOlder Track for Each Selected Track">
       <metadata>
         <link rel="website">https://www.jesserope.com</link>
