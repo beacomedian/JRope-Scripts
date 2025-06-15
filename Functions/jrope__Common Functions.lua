@@ -3,8 +3,8 @@
  * Author: Jesse Rope
  * Repository: GitHub > beacomedian
  * Licence: GPL v3
- * REAPER: 7.0
- * Version: 0.0
+ * REAPER: 7.4
+ * Version: 1.0
  * Provides:
  * Link: https://www.jesserope.com
  * About:
