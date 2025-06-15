@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="a2ff015fb53588b9b086254e399ddee2c2534565">
+<index version="1" name="JRope Scripts" commit="963a58f3aafdc59b997a6210ebd6f8788d5c762f">
   <category name="Functions">
     <reapack name="jrope__Common Functions.lua" type="script" desc="Jrope Common Functions">
       <metadata>
@@ -7,6 +7,9 @@
       </metadata>
       <version name="0.0" author="Jesse Rope" time="2025-06-05T19:02:58Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/9d0bcecee5321f7ef3c529ef6eebf41023d6be10/Functions/jrope__Common%20Functions.lua</source>
+      </version>
+      <version name="1.0" author="Jesse Rope" time="2025-06-15T22:50:31Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e9bc57f5ffe7d3ef79fa229679fe6f2290acc139/Functions/jrope__Common%20Functions.lua</source>
       </version>
     </reapack>
   </category>
@@ -29,6 +32,21 @@
       </metadata>
       <version name="1.0" author="Jesse Rope" time="2024-09-15T01:59:42Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/Items/jrope_Add%20items%20after%20selected%20items%20on%20same%20track%20to%20selection.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Group Adjacent Selected Items.lua" type="script" desc="Group Adjacent Selected Items">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 From selected items, group contiguous chains of items, per track\par}
+}
+]]></description>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2025-06-15T22:50:31Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e9bc57f5ffe7d3ef79fa229679fe6f2290acc139/Items/jrope_Group%20Adjacent%20Selected%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_Group items horizontally by track.lua" type="script" desc="Group items horizontally by track">
