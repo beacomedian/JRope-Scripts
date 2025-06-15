@@ -1,8 +1,3 @@
---####################################
---#######  WORK  IN  PROGRESS ########
---####################################
-
-
 --[[
  * Name: Randomly color all items by Group ID
  * Author: Jesse Rope
