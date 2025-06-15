@@ -1,6 +1,6 @@
 --[[
  * Name: Rename markers and regions within current time selection
- * Author: Jesse Rope + ChatGPT
+ * Author: Jesse Rope
  * Repository: github.com/beacomedian/JRope-Scripts
  * Licence: GPL v3
  * REAPER: 7.0
@@ -11,7 +11,9 @@
  * noindex
  * About:
   # Renames markers and regions that start and end within the bounds of the current time selection
-
+  # TO DO: 
+    # add optional string input to only rename markers that match it (skipped if blank)
+    # add option to only name blank/empty markers/regions
  
 
  * Changelog:
