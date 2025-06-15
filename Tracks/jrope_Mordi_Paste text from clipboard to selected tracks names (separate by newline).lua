@@ -1,11 +1,11 @@
--- jrope: I've not touched this script, all credit to Mordi, only including in my repo because I use it in conjunction with my script 'Copy selected track names to clipboard'
+-- jrope: I've not touched this script aside from modifying the header for Reapack, all credit to Mordi, only including in my repo because I use it in conjunction with my script 'Copy selected track names to clipboard'
 
--- @description Paste text from clipboard to selected tracks names (separate by newline)
--- @author Mordi
--- @version 1.0
--- @changelog Initial release.
--- @screenshot https://i.imgur.com/SZqNCDZ.gif
--- @about
+-- * Name: Paste text from clipboard to selected tracks names (separate by newline)
+-- * Author: Mordi
+-- * Version: 1.0
+-- * Changelog: Initial release.
+-- * Link: https://i.imgur.com/SZqNCDZ.gif
+-- * About:
 --   # Paste text from clipboard to selected tracks names (separate by newline)
 --
 --   Made for copying an asset list from Google Docs into Reaper. Each line is copied to each selected track.
