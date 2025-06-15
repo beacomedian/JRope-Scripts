@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="48356e5b3be9b1a7e5645df5f90348e16437ef10">
+<index version="1" name="JRope Scripts" commit="a2ff015fb53588b9b086254e399ddee2c2534565">
   <category name="Functions">
     <reapack name="jrope__Common Functions.lua" type="script" desc="Jrope Common Functions">
       <metadata>
@@ -51,6 +51,22 @@
       </metadata>
       <version name="1.2" author="MPL (Modified by JRope)" time="2025-06-05T19:00:25Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/13c27f76d36837c0de1f36a1540ae5c8f59a46c9/Items/jrope_mpl_Snap%20selected%20items%20to%20each%20other%20-%20multi%20track.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Randomly Color All Grouped Items by Group.lua" type="script" desc="Randomly color all items by Group ID">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2025-06-15T20:57:46Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/a2ff015fb53588b9b086254e399ddee2c2534565/Items/jrope_Randomly%20Color%20All%20Grouped%20Items%20by%20Group.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Randomly Color Selected Items by Group.lua" type="script" desc="Randomly color selected items by Group ID">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2025-06-15T20:57:46Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/a2ff015fb53588b9b086254e399ddee2c2534565/Items/jrope_Randomly%20Color%20Selected%20Items%20by%20Group.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_Select items after selected items on same track.lua" type="script" desc="Select items after selected items on same track">
