@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="963a58f3aafdc59b997a6210ebd6f8788d5c762f">
+<index version="1" name="JRope Scripts" commit="02388ee1c42892f5938a2a296d1fc9c4d557b44a">
   <category name="Functions">
     <reapack name="jrope__Common Functions.lua" type="script" desc="Jrope Common Functions">
       <metadata>
@@ -180,6 +180,19 @@
       </metadata>
       <version name="1.0" author="Jesse Rope + ChatGPT" time="2024-09-15T01:59:42Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/Markers%20and%20Regions/jrope_Rename%20markers%20and%20regions%20within%20time%20selection.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="Media Explorer">
+    <reapack name="jrope_acendan Add custom user columns for Basehead Metadata.lua" type="script" desc="Basehead iXML Metadata Columns">
+      <metadata>
+        <link rel="website">https://aaroncendan.me</link>
+      </metadata>
+      <version name="1.6" author="Aaron Cendan, modified by Jesse Rope" time="2026-05-21T23:13:12Z">
+        <changelog><![CDATA[#1.5 Update LuaUtils path with case sensitivity for Linux
+#1.6 Modified iXML colums to pull in Basehead-generated fields
+#1.6 Pulled in ascenden utilities functions so the script runs standalone]]></changelog>
+        <source main="mediaexplorer">https://github.com/beacomedian/JRope-Scripts/raw/02388ee1c42892f5938a2a296d1fc9c4d557b44a/Media%20Explorer/jrope_acendan%20Add%20custom%20user%20columns%20for%20Basehead%20Metadata.lua</source>
       </version>
     </reapack>
   </category>
