@@ -119,6 +119,7 @@ function EnumSelectedItems()
     return reaper.GetSelectedMediaItem(0, i) -- returns the next item each time the loop is run
   end -- when i tries to get an item beyond the number selected, the reaper action will return nil, which will close the loop
 end
+
 --[[
 function CheckTableContents(...)
   -- local t = {}
@@ -282,39 +283,6 @@ function CountMatchingRegions_j( ... )
   return count
 end
 
-function RippleDeleteMatchingRegions( ... )
-  -- function main()
-    -- Verify the number of matching regions before proceeding
-    local matching_regions_count = CountMatchingRegions_j(...)
-    if matching_regions_count > 0 then
-        reaper.Main_OnCommandEx(40311, 0, 0) -- enable ripple editing
-        local _, num_markers, num_regions = reaper.CountProjectMarkers(0)       
-        local num_markers_and_regions = num_markers + num_regions
-        -- for i = num_regions, 0, -1 do    -- this command leaves some regions behind in large sessions
-        -- for i = num_markers_and_regions, 0, -1 do   -- this command leaves some regions behind in large sessions
-        for i = 200, 0, - 1 do -- forcing it to loop an arbitrarily high number takes care of all the regions, so something about the loop counts above need to be reconsidered
-            local retval, isrgn, pos, rgnend, name, markrgnindexnumber = reaper.EnumProjectMarkers(i)            
-            -- if isrgn and name:find("^x ") then
-            -- if isrgn and name:find("^"..search_string) then -- trying out user input search string
-            if isrgn and name:find(...) then -- trying out user input search string
-                -- Set time selection to the region
-                reaper.GetSet_LoopTimeRange(true, false, pos, rgnend, false)
-                reaper.Main_OnCommandEx(40630, 0, 0) -- move cursor to start of time selection 
-                local pos = reaper.GetCursorPositionEx(0)         
-                Msg("Deleting Region: ",i)
-                reaper.Main_OnCommandEx(40717, 0, 0) -- select all items in time selection
-                reaper.Main_OnCommand(reaper.NamedCommandLookup("_XENAKIOS_TSADEL"), 0) -- adaptive delete time selection
-                reaper.Main_OnCommand(reaper.NamedCommandLookup("_SWS_CROSSFADE"), 0) -- crossfade adjacent selected items
-                reaper.AddProjectMarker2(0, false, pos, 0, "xAutoCut", -1, 0x1000000) -- add marker at saved pos
-            end
-        end
-    else reaper.ShowConsoleMsg("No X regions found.\n")
-    end
-    -- Clear time selection after operation
-    -- reaper.GetSet_LoopTimeRange(true, false, 0, 0, false)
--- end
-end
-
 function CountMatchingMarkers_j( ... )
   -- local _, _, num_regions = reaper.CountProjectMarkers(0)
   local _, num_markers, num_regions = reaper.CountProjectMarkers(0)
@@ -340,41 +308,87 @@ function CountMatchingMarkers_j( ... )
   return count
 end
 
+function RippleDeleteMatchingRegions( ... )
+  -- function main()
+    -- Get time selection
+    SaveLoopTimesel() -- init_start_timesel, init_end_timesel
+    -- Verify the number of matching regions before proceeding
+    local matching_regions_count = CountMatchingRegions_j(...)
+    if matching_regions_count > 0 then
+        reaper.Main_OnCommandEx(40311, 0, 0) -- enable ripple editing
+        local _, num_markers, num_regions = reaper.CountProjectMarkers(0)       
+        local num_markers_and_regions = num_markers + num_regions
+        -- for i = num_regions, 0, -1 do    -- this command leaves some regions behind in large sessions
+        -- for i = num_markers_and_regions, 0, -1 do   -- this command leaves some regions behind in large sessions
+        for i = 200, 0, - 1 do -- forcing it to loop an arbitrarily high number takes care of all the regions, so something about the loop counts above need to be reconsidered
+        -- probably should do something like putting loop ID into a table then running a while loop and strike off the ID as it's processed
+            local retval, isrgn, pos, rgnend, name, markrgnindexnumber = reaper.EnumProjectMarkers(i)            
+            -- if isrgn and name:find("^x ") then
+            -- if isrgn and name:find("^"..search_string) then -- trying out user input search string
+            if isrgn and name:find(...) then -- trying out user input search string
+              -- ensure region is inside original time selection if there was one
+              if pos >= init_start_timesel and rgnend <= init_end_timesel or init_start_timesel == init_end_timesel then
+                  -- Set time selection to the region
+                  reaper.GetSet_LoopTimeRange(true, false, pos, rgnend, false)
+                  reaper.Main_OnCommandEx(40630, 0, 0) -- move cursor to start of time selection 
+                  local pos = reaper.GetCursorPositionEx(0)         
+                  Msg("Deleting Region: ",i)
+                  reaper.Main_OnCommandEx(40717, 0, 0) -- select all items in time selection
+                  reaper.Main_OnCommand(reaper.NamedCommandLookup("_XENAKIOS_TSADEL"), 0) -- adaptive delete time selection
+                  reaper.Main_OnCommand(reaper.NamedCommandLookup("_SWS_CROSSFADE"), 0) -- crossfade adjacent selected items
+                  reaper.AddProjectMarker2(0, false, pos, 0, "xAutoCut", -1, 0x1000000) -- add marker at saved pos
+                end
+            end
+        end
+    else reaper.ShowConsoleMsg("No X regions found.\n")
+    end
+    -- Clear time selection after operation
+    -- reaper.GetSet_LoopTimeRange(true, false, 0, 0, false)
+-- end
+end
+
 
 function CreateRegionsAroundMarkers( ... )
+  -- SaveLoopTimesel() -- init_start_timesel, init_end_timesel
   local search_string = ...
   local marker_index = 0
   local found = false
-    local matching_markers_count = CountMatchingMarkers_j(search_string)
+  local matching_markers_count = CountMatchingMarkers_j(search_string)
 
-    if matching_markers_count > 0 then
+    if matching_markers_count > 0 then -- make sure there are markers matching the string
         -- reaper.Main_OnCommandEx(40311, 0, 0) -- enable ripple editing
-        local _, num_markers, num_regions = reaper.CountProjectMarkers(0)       
+        local _, num_markers, num_regions = reaper.CountProjectMarkers(0) 
         local num_markers_and_regions = CountMarkersAndRegions()
         Msg("Expected Loop Times: ",num_markers_and_regions)
-        -- while marker_index < num_markers_and_regions do   
-        -- for i = 0, (num_markers_and_regions+added_region) do
+
         while true do -- WHILE loops may be dangerous when creating new markers
+          -- [] how to refactor this loop so that it only runs on the original matching markers and stops when they are processed
+
           -- Recount the total number of markers on each iteration
           local _, num_markers, num_regions = reaper.CountProjectMarkers(0)
           local num_markers_and_regions = num_markers + num_regions
           -- Exit the loop if we've checked all markers
           if marker_index >= num_markers_and_regions then break end
 
-          -- Msg("Loop: ",(1+marker_index))
-          local retval, isrgn, pos, rgnend, name, marker_idx = reaper.EnumProjectMarkers(marker_index)
-          if not retval then break end
-          if isrgn == true then Msg((1+marker_index),": Skipping region") end
-          if not isrgn and not name:find(...) then Msg((1+marker_index),": Skipping !match marker") end
+            -- Msg("Loop: ",(1+marker_index))
+            -- marker_index is based on timeline position - this breaks if we add a region that starts before an unprocessed marker
+            local retval, isrgn, pos, rgnend, name, marker_idx = reaper.EnumProjectMarkers(marker_index) 
+            if not retval then break end
+            if isrgn == true then Msg((1+marker_index),": Skipping region") end
+            if not isrgn and not name:find(...) then Msg((1+marker_index),": Skipping !match marker") end
 
-          if not isrgn and name:find(...) then -- and not name:find("Auto")
-              -- Create region around marker
-              local region_start = pos - (region_size-(region_size*region_weight))
-              local region_end = pos + (region_size+(region_size*region_weight))
-              reaper.AddProjectMarker2(0, true, region_start, region_end, "xAutoCreatedForGather: "..search_string, -1, 0x1000000)
-              found = true
-              Msg((1+marker_index),": Marker Created")
-          end
+            if not isrgn and name:find(...) then -- and not name:find("Auto")
+                -- work only in time selection if there is one
+                if pos >= init_start_timesel and pos <= init_end_timesel or init_start_timesel == init_end_timesel then
+                  -- Create region around marker
+                  local region_start = pos - (region_size-(region_size*region_weight))
+                  local region_end = pos + (region_size+(region_size*region_weight))
+                  reaper.AddProjectMarker2(0, true, region_start, region_end, "xAutoCreatedForGather: "..search_string, -1, 0x1000000)
+                  found = true
+                  Msg((1+marker_index),": Marker Created")
+                end
+              -- Msg((1+marker_index),": Outside Time Selection") -- not the right spot
+            end
 
           marker_index = marker_index + 1
       end
@@ -425,6 +439,9 @@ function GatherRegionsContentsMatchingString(is_move,search_string,paste_pos)
   local paste_pos = reaper.GetCursorPosition()
   local init_paste_pos = paste_pos
   --[] add check to ensure the paste position is at the end of the project until I can make sure the moved markers don't get cycled
+
+  --[] Only run  on current time selection
+  -- SaveLoopTimesel() --init_start_timesel, init_end_timesel
 
   -- Get the number of regions/markers in the project
   local retval, num_markers, num_regions = reaper.CountProjectMarkers(0)
