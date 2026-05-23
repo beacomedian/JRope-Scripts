@@ -2,7 +2,8 @@
    * Category:    FX
    * Description: FX; Online all active FX on selected tracks.lua
    * Author:      Archie (modified by Jesse Rope)
-   * Repository:  https://github.com/ArchieScript/Archie_ReaScripts/raw/master/index.xml * Version:     1.1
+   * Repository:  https://github.com/ArchieScript/Archie_ReaScripts/raw/master/index.xml 
+   * Version:     1.1
    * Changelog:
    *              v.1.0
    *                  + initial
