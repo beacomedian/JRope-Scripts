@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="e685a56a6932bfef4c1888727ebe6c1b9a3c86f1">
+<index version="1" name="JRope Scripts" commit="399b7edb30965f3ea09aee221fed09f1562c6f70">
   <category name="Functions">
     <reapack name="jrope__Common Functions.lua" type="script" desc="Jrope Common Functions">
       <metadata>
@@ -33,6 +33,18 @@ v.1.1 JRope Modification
       instead of hardcoded parameter index 0, which was incorrectly offlining
       FX that have an active bypass envelope]]></changelog>
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e685a56a6932bfef4c1888727ebe6c1b9a3c86f1/FX/jrope_Offline%20Bypassed%20FX%20on%20Selected%20Tracks.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Online Unbypassed FX on Selected Tracks.lua" type="script" desc="FX; Online all active FX on selected tracks.lua">
+      <version name="1.1" author="Archie (modified by Jesse Rope)" time="2026-05-23T00:07:07Z">
+        <changelog><![CDATA[v.1.0
+    + initial
+v.1.1 JRope Modification
+    + Skip FX that are manually bypassed
+    + Skip FX that have a bypass envelope (automation-managed)
+    # Fixed bypass envelope detection: use TrackFX_GetParamFromIdent(':bypass')
+      instead of hardcoded parameter index 0]]></changelog>
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/399b7edb30965f3ea09aee221fed09f1562c6f70/FX/jrope_Online%20Unbypassed%20FX%20on%20Selected%20Tracks.lua</source>
       </version>
     </reapack>
     <reapack name="kusa_Setup Compactor from selected to hovered track.lua" type="script" desc="kusa_Setup kH Compactor from selected to hovered track">
@@ -146,6 +158,14 @@ v.1.1 JRope Modification
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e685a56a6932bfef4c1888727ebe6c1b9a3c86f1/Items/jrope_Randomly%20select%20N%20items%20from%20currently%20selected%20items.lua</source>
       </version>
     </reapack>
+    <reapack name="jrope_Replace Missing Source Wav with Flac - Search.lua" type="script" desc="Relink missing WAV Source with FLAC">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.1" author="Jesse Rope" time="2026-05-23T00:06:50Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/3d4a48f60b92fec8f7c2e739510d5900360606e5/Items/jrope_Replace%20Missing%20Source%20Wav%20with%20Flac%20-%20Search.lua</source>
+      </version>
+    </reapack>
     <reapack name="jrope_Select first N items from currently selected items.lua" type="script" desc="Select First N Items Per Track">
       <metadata>
         <link rel="website">https://www.jesserope.com</link>
@@ -249,6 +269,14 @@ v.1.1 JRope Modification
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/Markers%20and%20Regions/jrope_Rename%20markers%20and%20regions%20within%20time%20selection.lua</source>
       </version>
     </reapack>
+    <reapack name="jrope_Rename selected Markers and Regions from clipboard.lua" type="script" desc="Rename markers/regions from clipboard">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.1" author="Jesse Rope" time="2026-05-23T00:06:50Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/3d4a48f60b92fec8f7c2e739510d5900360606e5/Markers%20and%20Regions/jrope_Rename%20selected%20Markers%20and%20Regions%20from%20clipboard.lua</source>
+      </version>
+    </reapack>
   </category>
   <category name="Media Explorer">
     <reapack name="jrope_acendan Add custom user columns for Basehead Metadata.lua" type="script" desc="Basehead iXML Metadata Columns">
@@ -274,6 +302,11 @@ v.1.1 JRope Modification
     </reapack>
   </category>
   <category name="Tracks">
+    <reapack name="jrope_cfillion_Toggle visibility of empty non-folder tracks in selected tracks.lua" type="script" desc="Toggle visibility of empty non-folder tracks (selected only)">
+      <version name="1.0" author="cfillion (modified by Jesse Rope)" time="2026-05-23T00:06:50Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/3d4a48f60b92fec8f7c2e739510d5900360606e5/Tracks/jrope_cfillion_Toggle%20visibility%20of%20empty%20non-folder%20tracks%20in%20selected%20tracks.lua</source>
+      </version>
+    </reapack>
     <reapack name="jrope_Copy selected track names to clipboard.lua" type="script" desc="Copy selected track names to clipboard">
       <metadata>
         <link rel="website">https://www.jesserope.com</link>
@@ -288,6 +321,27 @@ v.1.1 JRope Modification
       </metadata>
       <version name="1.0" author="Jesse Rope" time="2025-06-09T20:16:04Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/8ec51996057dec1c24f569ca63331235095e9473/Tracks/jrope_Create%20New%20Named%20Folder%20Track%20for%20Each%20Selected%20Track.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Delete empty tracks from among selected tracks.lua" type="script" desc="Delete Empty Tracks Among Selected (Respecting Folder Hierarchy)">
+      <version name="1.0" author="Jesse Rope" time="2026-05-23T00:06:50Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/3d4a48f60b92fec8f7c2e739510d5900360606e5/Tracks/jrope_Delete%20empty%20tracks%20from%20among%20selected%20tracks.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Hide Muted tracks and their Children in selected tracks.lua" type="script" desc="Hide Muted Tracks and their children in Selected Tracks">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2026-05-23T00:06:50Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/3d4a48f60b92fec8f7c2e739510d5900360606e5/Tracks/jrope_Hide%20Muted%20tracks%20and%20their%20Children%20in%20selected%20tracks.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Hide Muted tracks in selected tracks.lua" type="script" desc="Hide Muted Tracks in Selected Tracks">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2026-05-23T00:06:50Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/3d4a48f60b92fec8f7c2e739510d5900360606e5/Tracks/jrope_Hide%20Muted%20tracks%20in%20selected%20tracks.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_Select First Track Visible in TCP.lua" type="script" desc="Select First Track Visible in TCP">
