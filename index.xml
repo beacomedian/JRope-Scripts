@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="399b7edb30965f3ea09aee221fed09f1562c6f70">
+<index version="1" name="JRope Scripts" commit="ff1b4994252d3c29fd0b8fc7a847568ba843e772">
   <category name="Functions">
     <reapack name="jrope__Common Functions.lua" type="script" desc="Jrope Common Functions">
       <metadata>
@@ -315,6 +315,11 @@ v.1.1 JRope Modification
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/48356e5b3be9b1a7e5645df5f90348e16437ef10/Tracks/jrope_Copy%20selected%20track%20names%20to%20clipboard.lua</source>
       </version>
     </reapack>
+    <reapack name="jrope_Copy selected tracks without children.lua" type="script" desc="Copy selected tracks without children">
+      <version name="1.0" author="Jesse Rope" time="2026-06-18T17:15:56Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/7e99da22a17a1244c1feb063d5bc3f60bee43110/Tracks/jrope_Copy%20selected%20tracks%20without%20children.lua</source>
+      </version>
+    </reapack>
     <reapack name="jrope_Create New Named Folder Track for Each Selected Track.lua" type="script" desc="Create New Named FOlder Track for Each Selected Track">
       <metadata>
         <link rel="website">https://www.jesserope.com</link>
@@ -354,12 +359,28 @@ v.1.1 JRope Modification
     </reapack>
   </category>
   <category name="Various">
+    <reapack name="jrope_Clean Multiple Sessions' Source Directories.lua" type="script" desc="JROPE - Clean Multiple Sessions' Source Directories (GUI)">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="2.4" author="Jesse Rope" time="2026-06-02T01:25:30Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/66af7f26b04f32e9898561a471fc9bfe4beb62b2/Various/jrope_Clean%20Multiple%20Sessions'%20Source%20Directories.lua</source>
+      </version>
+    </reapack>
     <reapack name="jrope_Contextual mute.lua" type="script" desc="Contextual Mute">
       <metadata>
         <link rel="website">https://www.jesserope.com</link>
       </metadata>
       <version name="1.0" author="Jesse Rope" time="2024-09-15T01:59:42Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/Various/jrope_Contextual%20mute.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Import Source Files to Best Matched Track.lua" type="script" desc="Import Files to Best Match Track">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2026-06-18T17:10:36Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/eb82d87ef1d4df87d396cbcac209508ab2033185/Various/jrope_Import%20Source%20Files%20to%20Best%20Matched%20Track.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_Play Toggle Double Speed.lua" type="script" desc="Play Toggle double Speed and Reset Playrate on Stop">
@@ -404,6 +425,16 @@ v.1.1 JRope Modification
       </metadata>
       <version name="1.0" author="Jesse Rope" time="2024-09-15T01:59:42Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/View/jrope_Contextual%20zoom.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="Wwise">
+    <reapack name="jrope_Import Wwise Mixer Hierarchy to Tracks.lua" type="script" desc="Import Wwise Mixer to Track Hierarchy">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.4" author="Jesse Rope" time="2026-06-18T17:11:29Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/adbf9e4826a436be53d099d004162ef446bcb44a/Wwise/jrope_Import%20Wwise%20Mixer%20Hierarchy%20to%20Tracks.lua</source>
       </version>
     </reapack>
   </category>
