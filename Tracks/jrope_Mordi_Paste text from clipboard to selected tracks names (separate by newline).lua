@@ -14,10 +14,14 @@
 
 SCRIPT_NAME = "Paste text from clipboard to selected tracks names"
 
-reaper.ClearConsole()
+ENABLE_DEBUG_LOG = false
 
-function Msg(variable)
-  reaper.ShowConsoleMsg(tostring(variable).."\n")
+if ENABLE_DEBUG_LOG then reaper.ClearConsole() end
+
+local function Log(variable)
+  if ENABLE_DEBUG_LOG then
+    reaper.ShowConsoleMsg(tostring(variable).."\n")
+  end
 end
 
 -- Separate clipboard text into array

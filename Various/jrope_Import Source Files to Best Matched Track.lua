@@ -33,8 +33,8 @@
 ---------------------------------
 
 -- Logging -------------------------------------------------------------
-local ENABLE_DEBUG_LOG     = true   -- true = print step-by-step matching/placement info to the REAPER console. Set false once you trust the results.
-local CLEAR_CONSOLE_ON_RUN = true   -- true = wipe the console at the start of every run so old logs don't pile up. Has no effect if ENABLE_DEBUG_LOG is false.
+ENABLE_DEBUG_LOG     = true  -- true = print step-by-step matching/placement info to the REAPER console. Set false once you trust the results.
+CLEAR_CONSOLE_ON_RUN = true   -- true = wipe the console at the start of every run so old logs don't pile up. Has no effect if ENABLE_DEBUG_LOG is false.
 
 -- File scanning ---------------------------------------------------------
 local VALID_EXTENSIONS   = { "wav", "flac", "mp3", "ogg", "aif", "aiff" } -- only files with these extensions will be imported. Not case-sensitive.
@@ -89,14 +89,6 @@ local script_path = debug.getinfo(1, "S").source:match([[^@?(.*[\/])[^\/]-$]])
 local parent_path = script_path:match([[^(.*[\/])[^\/]-[\/]$]]) 
 package.path = parent_path .. "Functions/?.lua;" .. package.path
 require("jrope__Common Functions")
-
-
--- Prints to the REAPER console only when ENABLE_DEBUG_LOG is true above.
-local function Log(msg)
-  if ENABLE_DEBUG_LOG then
-    r.ShowConsoleMsg(tostring(msg) .. "\n")
-  end
-end
 
 
 -- Splits a string into lowercase word "tokens" on every run of
@@ -339,7 +331,7 @@ end
 
 function main()
 
-  if CLEAR_CONSOLE_ON_RUN then r.ClearConsole() end
+  if ENABLE_DEBUG_LOG and CLEAR_CONSOLE_ON_RUN then r.ClearConsole() end
   Log("---- Import Files to Best Match Track ----")
 
   local folder = GetSourceFolder()

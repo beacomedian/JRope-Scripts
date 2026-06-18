@@ -49,7 +49,7 @@ local DEFAULT_TRASH_SUBFOLDER = "temp_trash"
 
 -- Print a detailed scan report to the REAPER console. Can also be toggled
 -- live with the checkbox in the window; this is just the starting value.
-local ENABLE_LOGGING = true
+-- local ENABLE_DEBUG_LOG = true -- use checkmark in GUI
 
 -- When logging, cap each list in the report to this many items. A big project
 -- can reference hundreds of files, and the console only keeps ~300 lines, so
@@ -93,7 +93,7 @@ local state = {
     ignore_text      = DEFAULT_IGNORE_PATTERNS,
     audio_subfolders = DEFAULT_AUDIO_SUBFOLDERS,   -- multiline: one folder per line
     trash_subfolder  = DEFAULT_TRASH_SUBFOLDER,
-    logging          = ENABLE_LOGGING,
+    logging          = ENABLE_DEBUG_LOG,
     scanned          = false,   -- has a scan run yet?
     results          = {},      -- list of { path, name } records to clean
     excluded         = {},      -- records held back: { path, name, reason }

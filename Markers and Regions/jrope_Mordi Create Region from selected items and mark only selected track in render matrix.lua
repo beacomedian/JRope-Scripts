@@ -22,10 +22,14 @@
 
 SCRIPT_NAME = "Create single region from selected items (get name and color from folder track) and mark all item tracks in region render matrix"
 
-reaper.ClearConsole()
+ENABLE_DEBUG_LOG = false
 
-function Msg(variable)
-  reaper.ShowConsoleMsg(tostring(variable).."\n")
+if ENABLE_DEBUG_LOG then reaper.ClearConsole() end
+
+local function Log(variable)
+  if ENABLE_DEBUG_LOG then
+    reaper.ShowConsoleMsg(tostring(variable).."\n")
+  end
 end
 
 selectedItemNum = reaper.CountSelectedMediaItems()

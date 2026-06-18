@@ -16,12 +16,14 @@
  
 -- 
 
--- ----- DEBUGGING ====>
-reselect_groups = true
--- <==== DEBUGGING -----
+ENABLE_DEBUG_LOG = false
 
-function Msg(variable)
+reselect_groups = true
+
+local function Log(variable)
+  if ENABLE_DEBUG_LOG then
     reaper.ShowConsoleMsg(tostring(variable).."\n")
+  end
 end
 
 function KeepSelOnlyFirstItemInGroups()

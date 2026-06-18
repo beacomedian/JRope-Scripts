@@ -21,7 +21,7 @@
 ---------- USER CONFIG ----------
 ---------------------------------
 
-local DEBUG = false  -- set to false to silence console output
+ENABLE_DEBUG_LOG = false  -- set to true to print debug output to the REAPER console
 
 
 ---------------------------------
@@ -43,20 +43,16 @@ local parent_path = script_path:match([[^(.*[\/])[^\/]-[\/]$]])
 package.path = parent_path .. "Functions/?.lua;" .. package.path
 require("jrope__Common Functions")
 
-local function log(...)
-  if DEBUG then Print(...) end
-end
-
 function main()
   local num_selected = reaper.CountSelectedTracks(0)
 
   if num_selected == 0 then
-    log("No tracks selected")
+    Log("No tracks selected")
     reaper.ShowMessageBox("No tracks selected.", SCRIPT_NAME, 0)
     return
   end
 
-  log("Selected track count:", num_selected)
+  Log("Selected track count:", num_selected)
 
   -- Collect all selected tracks with hierarchy info
   local all_selected = {}
@@ -70,7 +66,7 @@ function main()
       depth = track_depth,
       is_top_level = true
     })
-    log("Collected track index:", track_idx, "depth:", track_depth)
+    Log("Collected track index:", track_idx, "depth:", track_depth)
   end
 
   -- Sort by track index so parent-child relationships are checkable
@@ -81,7 +77,7 @@ function main()
     for j = i - 1, 1, -1 do
       if all_selected[j].depth < all_selected[i].depth then
         all_selected[i].is_top_level = false
-        log("Track", all_selected[i].index, "marked as child of track", all_selected[j].index)
+        Log("Track", all_selected[i].index, "marked as child of track", all_selected[j].index)
         break
       end
     end
@@ -98,11 +94,11 @@ function main()
         depth = all_selected[i].depth,
         was_folder = (folder_depth == 1)
       })
-      log("Top-level track:", all_selected[i].index, "was_folder:", (folder_depth == 1))
+      Log("Top-level track:", all_selected[i].index, "was_folder:", (folder_depth == 1))
     end
   end
 
-  log("Top-level count:", #top_level_parents, "| Excluded children:", num_selected - #top_level_parents)
+  Log("Top-level count:", #top_level_parents, "| Excluded children:", num_selected - #top_level_parents)
 
   -- Select only the top-level tracks
   reaper.Main_OnCommand(40297, 0) -- deselect all tracks
@@ -114,7 +110,7 @@ function main()
   for i = 1, #top_level_parents do
     if top_level_parents[i].was_folder then
       reaper.SetMediaTrackInfo_Value(top_level_parents[i].track, "I_FOLDERDEPTH", 0)
-      log("Temporarily de-foldered track:", top_level_parents[i].index)
+      Log("Temporarily de-foldered track:", top_level_parents[i].index)
     end
   end
 
@@ -126,7 +122,7 @@ function main()
   for i = 1, #top_level_parents do
     if top_level_parents[i].was_folder then
       reaper.SetMediaTrackInfo_Value(top_level_parents[i].track, "I_FOLDERDEPTH", 1)
-      log("Restored folder depth for track:", top_level_parents[i].index)
+      Log("Restored folder depth for track:", top_level_parents[i].index)
     end
   end
 
@@ -138,7 +134,7 @@ function main()
     reaper.SetTrackSelected(all_selected[i].track, true)
   end
 
-  log("Done. Copied", #top_level_parents, "track(s), excluded", num_selected - #top_level_parents, "selected children")
+  Log("Done. Copied", #top_level_parents, "track(s), excluded", num_selected - #top_level_parents, "selected children")
 end
 
 

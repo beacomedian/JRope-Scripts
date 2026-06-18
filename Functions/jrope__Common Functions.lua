@@ -24,10 +24,12 @@
 -- ---------------- General Functions --------------------- --
 --||||||||||||||||||||||||||||||||||||||||||||||||||||||||||--
 
--- Prints to the REAPER console only when ENABLE_DEBUG_LOG is true above.
-local function Log(msg)
+-- Prints to the REAPER console only when the calling script sets ENABLE_DEBUG_LOG = true.
+function Log(...)
   if ENABLE_DEBUG_LOG then
-    r.ShowConsoleMsg(tostring(msg) .. "\n")
+    local t = {}
+    for _, v in ipairs({...}) do t[#t + 1] = tostring(v) end
+    reaper.ShowConsoleMsg(table.concat(t, " ") .. "\n")
   end
 end
 
@@ -195,13 +197,11 @@ end
 function ValueExistsInTable(tbl, value) -- check if a value exists in an table
     for i = 1, #tbl do
         if tbl[i] == value then
-          -- reaper.ShowConsoleMsg("Value " .. tostring(value) .. " already exists in the tbl.\n")
-          Msg("Value exists: ",value)
+          Log("Value exists: ", value)
             return true
         else
-          -- reaper.ShowConsoleMsg("Value " .. tostring(value) .. " does not exist in the tbl. \n")
-          Msg("Value doesn't exist: ",value)
-        end    
+          Log("Value doesn't exist: ", value)
+        end
     end
     return false
 end
@@ -224,8 +224,7 @@ end
 function CountMarkersAndRegions()
   local _, num_markers, num_regions = reaper.CountProjectMarkers(0)
   local num_markers_and_regions = num_markers + num_regions
-  -- if num_regions == 0 then Msg("No Regions","") return end
-  Msg("num_markers_and_regions: ",num_markers_and_regions)
+  Log("num_markers_and_regions: ", num_markers_and_regions)
   return num_markers_and_regions
 end
 
@@ -265,54 +264,41 @@ end
 -------------------------------------------------------
 
 function CountMatchingRegions_j( ... )
-  -- local _, _, num_regions = reaper.CountProjectMarkers(0)
   local _, num_markers, num_regions = reaper.CountProjectMarkers(0)
-  Msg("Input String: '",... .. "'")  
-  Msg("Total Markers:",num_markers)
-  Msg("Total Regions:",num_regions) 
+  Log("Input String: '", ... .. "'")
+  Log("Total Markers:", num_markers)
+  Log("Total Regions:", num_regions)
   local num_markers_and_regions = num_markers + num_regions
 
   local count = 0
 
-  -- for i = 0, num_regions - 1 do
   for i = 0, num_markers_and_regions - 1 do
-  -- for i = 200, 0, - 1 do -- forcing high loop
     local retval, isrgn, pos, rgnend, name, markrgnindexnumber = reaper.EnumProjectMarkers(i)
-    
-    -- if isrgn and name:find("^x ") then
-    -- if isrgn and name:find("^"..search_string) then -- trying out user input search string
-    if isrgn and name:find(...) then -- trying out user input search string
+    if isrgn and name:find(...) then
       count = count + 1
     end
   end
-  
-  -- Print the number of regions found with "x " prefix
-  reaper.ShowConsoleMsg(count .. " regions matching '".. ... .."'\n")
+
+  Log(count .. " regions matching '" .. ... .. "'")
   return count
 end
 
 function CountMatchingMarkers_j( ... )
-  -- local _, _, num_regions = reaper.CountProjectMarkers(0)
   local _, num_markers, num_regions = reaper.CountProjectMarkers(0)
-  Msg("Total Markers:",num_markers)
-  Msg("Total Regions:",num_regions)   
+  Log("Total Markers:", num_markers)
+  Log("Total Regions:", num_regions)
   local num_markers_and_regions = num_markers + num_regions
 
   local count = 0
 
-  -- for i = 0, num_regions - 1 do
   for i = 0, num_markers_and_regions - 1 do
-  -- for i = 200, 0, - 1 do -- forcing high loop
     local retval, isrgn, pos, rgnend, name, markrgnindexnumber = reaper.EnumProjectMarkers(i)
-    
-    -- if isrgn and name:find("^x ") then
-    -- if isrgn and name:find("^"..search_string) then -- trying out user input search string
-    if not isrgn and name:find(...) then -- trying out user input search string
+    if not isrgn and name:find(...) then
       count = count + 1
     end
   end
-  -- Print the number of regions found with "x " prefix
-  reaper.ShowConsoleMsg(count .. " markers matching '".. ... .."'\n")
+
+  Log(count .. " markers matching '" .. ... .. "'")
   return count
 end
 
@@ -338,9 +324,9 @@ function RippleDeleteMatchingRegions( ... )
               if pos >= init_start_timesel and rgnend <= init_end_timesel or init_start_timesel == init_end_timesel then
                   -- Set time selection to the region
                   reaper.GetSet_LoopTimeRange(true, false, pos, rgnend, false)
-                  reaper.Main_OnCommandEx(40630, 0, 0) -- move cursor to start of time selection 
-                  local pos = reaper.GetCursorPositionEx(0)         
-                  Msg("Deleting Region: ",i)
+                  reaper.Main_OnCommandEx(40630, 0, 0) -- move cursor to start of time selection
+                  local pos = reaper.GetCursorPositionEx(0)
+                  Log("Deleting Region: ", i)
                   reaper.Main_OnCommandEx(40717, 0, 0) -- select all items in time selection
                   reaper.Main_OnCommand(reaper.NamedCommandLookup("_XENAKIOS_TSADEL"), 0) -- adaptive delete time selection
                   reaper.Main_OnCommand(reaper.NamedCommandLookup("_SWS_CROSSFADE"), 0) -- crossfade adjacent selected items
@@ -348,7 +334,7 @@ function RippleDeleteMatchingRegions( ... )
                 end
             end
         end
-    else reaper.ShowConsoleMsg("No X regions found.\n")
+    else Log("No X regions found.")
     end
     -- Clear time selection after operation
     -- reaper.GetSet_LoopTimeRange(true, false, 0, 0, false)
@@ -367,7 +353,7 @@ function CreateRegionsAroundMarkers( ... )
         -- reaper.Main_OnCommandEx(40311, 0, 0) -- enable ripple editing
         local _, num_markers, num_regions = reaper.CountProjectMarkers(0) 
         local num_markers_and_regions = CountMarkersAndRegions()
-        Msg("Expected Loop Times: ",num_markers_and_regions)
+        Log("Expected Loop Times: ", num_markers_and_regions)
 
         while true do -- WHILE loops may be dangerous when creating new markers
           -- [] how to refactor this loop so that it only runs on the original matching markers and stops when they are processed
@@ -382,8 +368,8 @@ function CreateRegionsAroundMarkers( ... )
             -- marker_index is based on timeline position - this breaks if we add a region that starts before an unprocessed marker
             local retval, isrgn, pos, rgnend, name, marker_idx = reaper.EnumProjectMarkers(marker_index) 
             if not retval then break end
-            if isrgn == true then Msg((1+marker_index),": Skipping region") end
-            if not isrgn and not name:find(...) then Msg((1+marker_index),": Skipping !match marker") end
+            if isrgn == true then Log((1+marker_index), ": Skipping region") end
+            if not isrgn and not name:find(...) then Log((1+marker_index), ": Skipping !match marker") end
 
             if not isrgn and name:find(...) then -- and not name:find("Auto")
                 -- work only in time selection if there is one
@@ -393,7 +379,7 @@ function CreateRegionsAroundMarkers( ... )
                   local region_end = pos + (region_size+(region_size*region_weight))
                   reaper.AddProjectMarker2(0, true, region_start, region_end, "xAutoCreatedForGather: "..search_string, -1, 0x1000000)
                   found = true
-                  Msg((1+marker_index),": Marker Created")
+                  Log((1+marker_index), ": Marker Created")
                 end
               -- Msg((1+marker_index),": Outside Time Selection") -- not the right spot
             end
@@ -454,15 +440,15 @@ function GatherRegionsContentsMatchingString(is_move,search_string,paste_pos)
   -- Get the number of regions/markers in the project
   local retval, num_markers, num_regions = reaper.CountProjectMarkers(0)
   local num_markers_and_regions = num_markers + num_regions
-  if num_regions == 0 then Msg("No Regions","") return end
-  Msg("num_markers_and_regions: ",num_markers_and_regions)
+  if num_regions == 0 then Log("No Regions") return end
+  Log("num_markers_and_regions: ", num_markers_and_regions)
   CountMatchingRegions_j(search_string)
 
   local region_index_t={}
 
   -- Iterate over all markers and regions
   for i = 0, num_markers_and_regions+1 do
-    Msg("Loop: ",i)
+    Log("Loop: ", i)
       local retval, isrgn, pos, rgnend, name, indx, rgncolor = reaper.EnumProjectMarkers3(0,i)
       
       -- Check if it's a region and the name matches the search string
@@ -473,7 +459,7 @@ function GatherRegionsContentsMatchingString(is_move,search_string,paste_pos)
           local rgn_length = rgn_end - rgn_start
           -- set time selection to region length
           reaper.GetSet_LoopTimeRange(true, false, rgn_start, rgn_end, false)
-        Msg("Region Found: ",indx.." '"..name.."'")
+        Log("Region Found: ", indx .. " '" .. name .. "'")
         -- Msg("region start: ",rgn_start)
         -- Msg("region end: ",rgn_end)
           -- split items at time selection        
@@ -482,10 +468,10 @@ function GatherRegionsContentsMatchingString(is_move,search_string,paste_pos)
       -- reaper.Main_OnCommand(reaper.NamedCommandLookup("_RS2d4f5fa9faff65a9cae14178627cfed7f3e90aea"),0) -- splits items at region
           -- Iterate over all items and split if necessary
           if is_move then
-            reaper.ShowConsoleMsg("Moving...\n")
+            Log("Moving...")
             if reaper.GetToggleCommandState(41990) == 1 then -- if ripple is enabled for 1 track set it for all tracks            
               -- if ripple_per_track == 1 then
-            reaper.ShowConsoleMsg("Ripple Editing is enabled per track, changing to all tracks.\n")
+            Log("Ripple Editing is enabled per track, changing to all tracks.")
           -- reaper.SetToggleCommandState(0, 41991, 1) -- enable ripple editing
           reaper.Main_OnCommandEx(40311, 0, 0) -- enable ripple editing
           -- ripple_per_track = 0
@@ -529,11 +515,11 @@ function GatherRegionsContentsMatchingString(is_move,search_string,paste_pos)
               -- retval, isrgn, pos, rgnend, stringname, markrgnindexnumber, color = reaper.EnumProjectMarkers3(ReaProject proj, integer idx)
 
         else
-          reaper.ShowConsoleMsg("Could Not Determine Ripple State.\n")
+          Log("Could Not Determine Ripple State.")
         end
         
       else
-        reaper.ShowConsoleMsg("Copying...\n")
+        Log("Copying...")
         -- reaper.SetProjectMarkerByIndex(0, i, true, paste_pos, paste_pos + rgn_length, indx, "", 0)
             -- reaper.Main_OnCommand(40297s, 0) -- deselect all tracks
             -- reaper.Main_OnCommandEx(40311, 0, 0) -- enable ripple editing
@@ -557,10 +543,10 @@ function GatherRegionsContentsMatchingString(is_move,search_string,paste_pos)
           reaper.AddProjectMarker2(0, false, rgn_start, 0, marker_name, -1, 0x1000000)
           --add region index to table
           table.insert(region_index_t,indx)
-        Msg("Added Region Index: ",indx)  
-    end 
+        Log("Added Region Index: ", indx)
+    end
   end
-  Msg("Gathered Regions: ",#region_index_t)
+  Log("Gathered Regions: ", #region_index_t)
 end
 
 

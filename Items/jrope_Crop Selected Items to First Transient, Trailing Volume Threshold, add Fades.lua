@@ -23,7 +23,7 @@
 
 -- USER CONFIG AREA -----------------------------------------------------------
 
-console = false -- true/false: display debug messages in the console
+ENABLE_DEBUG_LOG = false -- set to true to print debug output to the REAPER console
 threshold_dB = -45 -- volume threshold in dB for right edge detection
 left_fade = 0.001 -- left fade duration in seconds
 right_fade = 0.1 -- right fade duration in seconds
@@ -36,12 +36,10 @@ set_snap_offset = false -- true/false: set item snap offset at the detected tran
 
 -- UTILITIES -------------------------------------------------------------
 
--- Display a message in the console for debugging
-function Msg(value)
-  if console then
-    reaper.ShowConsoleMsg(tostring(value) .. "\n")
-  end
-end
+local script_path = debug.getinfo(1, "S").source:match([[^@?(.*[\/])[^\/]-$]])
+local parent_path = script_path:match([[^(.*[\/])[^\/]-[\/]$]])
+package.path = parent_path .. "Functions/?.lua;" .. package.path
+require("jrope__Common Functions")
 
 -- Convert dB to linear value
 function WDL_DB2VAL(x) 
@@ -118,7 +116,7 @@ function main()
       -- Make sure we found a valid transient
       if new_start_pos <= item_pos or new_start_pos >= item_pos + item_len then
         new_start_pos = item_pos -- keep original start if transient detection fails
-        Msg("Item " .. i .. " - Warning: Could not find valid transient at start, keeping original position")
+        Log("Item " .. i .. " - Warning: Could not find valid transient at start, keeping original position")
       end
       
       -- Apply left padding (move start earlier)
@@ -129,7 +127,7 @@ function main()
       -- TRIM RIGHT EDGE TO THRESHOLD
       local right_trim = FindRightBoundary(item, take, threshold_lin)
       local new_end_pos = item_pos + item_len - right_trim
-      Msg("Item " .. i .. " - Right trim: " .. right_trim .. " seconds")
+      Log("Item " .. i .. " - Right trim: " .. right_trim .. " seconds")
       
       -- Apply right padding (move end later)
       new_end_pos = new_end_pos + right_padding
@@ -139,7 +137,7 @@ function main()
       -- Make sure the new end is after the new start
       if new_end_pos <= new_start_pos then
         new_end_pos = item_pos + item_len -- keep original end if something went wrong
-        Msg("Item " .. i .. " - Warning: Invalid trim result, keeping original length")
+        Log("Item " .. i .. " - Warning: Invalid trim result, keeping original length")
       end
       
       -- Apply the new edges
@@ -150,22 +148,22 @@ function main()
         -- Calculate snap offset relative to new item start
         local snap_offset = transient_pos - new_start_pos
         reaper.SetMediaItemInfo_Value(item, "D_SNAPOFFSET", snap_offset)
-        Msg("Item " .. i .. " - Snap offset set at " .. snap_offset .. " seconds from item start")
+        Log("Item " .. i .. " - Snap offset set at " .. snap_offset .. " seconds from item start")
       end
       
       -- ADD FADES
       reaper.SetMediaItemInfo_Value(item, "D_FADEINLEN", left_fade)
       reaper.SetMediaItemInfo_Value(item, "D_FADEOUTLEN", right_fade)
       
-      if console then
+      if ENABLE_DEBUG_LOG then
         local padding_info = ""
         if left_padding > 0 or right_padding > 0 then
           padding_info = " (with padding: L=" .. left_padding_ms .. "ms, R=" .. right_padding_ms .. "ms)"
         end
-        Msg("Item " .. i .. " - Processed: Start=" .. new_start_pos .. " End=" .. new_end_pos .. padding_info)
+        Log("Item " .. i .. " - Processed: Start=" .. new_start_pos .. " End=" .. new_end_pos .. padding_info)
       end
     else
-      Msg("Item " .. i .. " - Skipped (MIDI or no active take)")
+      Log("Item " .. i .. " - Skipped (MIDI or no active take)")
     end
   end
 end
@@ -183,7 +181,7 @@ function Init()
   -- Check for selected items
   local count_sel_items = reaper.CountSelectedMediaItems(0)
   if count_sel_items == 0 then
-    Msg("No items selected")
+    Log("No items selected")
     return false
   end
   
@@ -229,7 +227,7 @@ end
 
 -- reaper.APITest()
 -- local time_init = reaper.time_precise()
--- reaper.ShowConsoleMsg("-- Script started\n")
+-- reaper.ShowConsoleLog("-- Script started\n")
 
 -- Begin the undo block
 reaper.PreventUIRefresh(1)
@@ -256,5 +254,5 @@ reaper.PreventUIRefresh(-1)
 reaper.UpdateArrange()
 
 -- End the undo block with a description
--- reaper.ShowConsoleMsg("-- Script finished\n\n")
+-- reaper.ShowConsoleLog("-- Script finished\n\n")
 -- reaper.ShowMessageBox("Script executed in (s): "..tostring(reaper.time_precise() - time_init), "", 0)

@@ -69,7 +69,7 @@ local script_name = ({reaper.get_action_context()})[2]:match("([^/\\_]+)%.lua$")
 local script_directory = ({reaper.get_action_context()})[2]:sub(1,({reaper.get_action_context()})[2]:find("\\[^\\]*$"))
 local win, sep = acendan.getOS()
 local ini_section = win and "reaper_explorer" or "reaper_sexplorer" -- For some reason, it's 'sexplorer' on Mac
-local dbg = false
+local ENABLE_DEBUG_LOG = true
 
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 -- ~~~~~~~~~~~~ FUNCTIONS ~~~~~~~~~~~
@@ -81,7 +81,7 @@ function main()
     AddIXML()
   else
     -- ~~~~~~~~~ PRE-RELEASE BUILDS ONLY
-    if dbg then AddIXML() else
+    if ENABLE_DEBUG_LOG then AddIXML() else
     -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     reaper.MB("This script requires Reaper v6.29 or greater! Please update Reaper.","ERROR: Update Reaper!",0) end
   end
@@ -99,7 +99,7 @@ function AddIXML()
     local ret,val = reaper.BR_Win32_GetPrivateProfileString(ini_section,"user" .. tostring(i) .. "_key","",ini_file)
     -- Check if custom user column is already in table
     if tableContainsKey(iXML,val) then
-      if dbg then reaper.ShowConsoleMsg("Found existing entry for: " .. iXML[val] .. "\n") end
+      if ENABLE_DEBUG_LOG then reaper.ShowConsoleMsg("Found existing entry for: " .. iXML[val] .. "\n") end
       iXML[val] = nil
     end
     i = i+1
@@ -117,9 +117,9 @@ function AddIXML()
       -- Set custom entry flag
       local ret3 = reaper.BR_Win32_WritePrivateProfileString(ini_section,"user" .. tostring(i) .. "_flags","1",ini_file)
       if ret and ret2 then 
-        if dbg then reaper.ShowConsoleMsg("Succesfully added entry: " .. k .. " - " .. v .. "\n") end
+        if ENABLE_DEBUG_LOG then reaper.ShowConsoleMsg("Succesfully added entry: " .. k .. " - " .. v .. "\n") end
       else
-        reaper.ShowConsoleMsg("ERROR! Failed to add entry: " .. k .. " - " .. v .. "\n")
+        if ENABLE_DEBUG_LOG then reaper.ShowConsoleMsg("ERROR: Failed to add entry: " .. k .. " - " .. v .. "\n") end
       end
       i = i + 1
     end
