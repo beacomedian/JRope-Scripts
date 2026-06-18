@@ -24,6 +24,14 @@
 -- ---------------- General Functions --------------------- --
 --||||||||||||||||||||||||||||||||||||||||||||||||||||||||||--
 
+-- Prints to the REAPER console only when ENABLE_DEBUG_LOG is true above.
+local function Log(msg)
+  if ENABLE_DEBUG_LOG then
+    r.ShowConsoleMsg(tostring(msg) .. "\n")
+  end
+end
+
+
 function Msg(x,y)
     reaper.ShowConsoleMsg(tostring(x)..tostring(y).."\n")
 end 
