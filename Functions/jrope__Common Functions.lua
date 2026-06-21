@@ -96,14 +96,6 @@ function GetTimeSelection()
   end
 end
 
-function CheckIfItemsSelected()
-  if sel_item_count_i == 0 then 
-    Msg("Select Items: ","") 
-    reaper.ShowMessageBox("Select Items!", "", 0)
-    return  
-  end
-end
-
 --- Return dbval in linear value. 0 = -inf, 1 = 0dB, 2 = +6dB, etc...
 function dBToLinear(dbval)
     return 10^(dbval/20) 
@@ -233,12 +225,78 @@ function MapRange(value,min1,max1,min2,max2)
 end
 
 function RandomNumberFloat(min,max,is_include_max)
-    local sub = (is_include_max and 0) or 1 --  -1 because it cant never be the max value. Lets say we want to choose random between a and b a have 2/3 chance and b 1/3. If the random value is from 0 - 2(not includded) it is a, if the value is from 2 - 3(not includded) it is b. 
+    local sub = (is_include_max and 0) or 1 --  -1 because it cant never be the max value. Lets say we want to choose random between a and b a have 2/3 chance and b 1/3. If the random value is from 0 - 2(not includded) it is a, if the value is from 2 - 3(not includded) it is b.
     local big_val = 1000000 -- the bigger the number the bigger the resolution. Using 1M right now
     local random = math.random(0,big_val-sub) -- Generating a very big value to be Scaled to the sum of the chances, for enabling floats.
     random = MapRange(random,0,big_val,min,max) -- Scale the random value to the sum of the chances
 
     return random
+end
+
+
+-- Returns the selected media item count. If zero, shows a message box and returns nil.
+-- Usage: if not RequireSelectedItems() then return end
+function RequireSelectedItems(msg)
+  local count = reaper.CountSelectedMediaItems(0)
+  if count == 0 then
+    reaper.ShowMessageBox(msg or "No items selected!", "Error", 0)
+    return nil
+  end
+  return count
+end
+
+-- Returns the selected track count. If zero, shows a message box and returns nil.
+-- Usage: if not RequireSelectedTracks() then return end
+function RequireSelectedTracks(msg)
+  local count = reaper.CountSelectedTracks(0)
+  if count == 0 then
+    reaper.ShowMessageBox(msg or "No tracks selected!", "Error", 0)
+    return nil
+  end
+  return count
+end
+
+-- Returns a table keyed by track (MediaTrack*) -> ordered list of that track's
+-- currently selected items, in selection order.
+function GetSelectedItemsByTrack()
+  local tracks_items = {}
+  for i = 0, reaper.CountSelectedMediaItems(0) - 1 do
+    local item = reaper.GetSelectedMediaItem(0, i)
+    local track = reaper.GetMediaItem_Track(item)
+    if not tracks_items[track] then tracks_items[track] = {} end
+    table.insert(tracks_items[track], item)
+  end
+  return tracks_items
+end
+
+-- Sorts an array of media items in place by timeline position (ascending). Returns the table.
+function SortItemsByPosition(items)
+  table.sort(items, function(a, b)
+    return reaper.GetMediaItemInfo_Value(a, "D_POSITION") < reaper.GetMediaItemInfo_Value(b, "D_POSITION")
+  end)
+  return items
+end
+
+-- Absolute folder nesting depth of a track: the running sum of I_FOLDERDEPTH deltas
+-- of all tracks before it. Top-level tracks return 0. Clamped to >= 0.
+function GetTrackDepth(track)
+  local track_idx = reaper.GetMediaTrackInfo_Value(track, "IP_TRACKNUMBER") - 1
+  local depth = 0
+  for i = 0, track_idx - 1 do
+    depth = depth + reaper.GetMediaTrackInfo_Value(reaper.GetTrack(0, i), "I_FOLDERDEPTH")
+  end
+  if depth < 0 then depth = 0 end
+  return depth
+end
+
+-- Item color as displayed (falls back to track/default color if the item has none).
+function GetItemDisplayedColor(item)
+  return reaper.GetDisplayedMediaItemColor(item)
+end
+
+-- Item's explicitly-set custom color (raw int incl. the 0x1000000 "set" flag; 0 if none).
+function GetItemCustomColor(item)
+  return reaper.GetMediaItemInfo_Value(item, "I_CUSTOMCOLOR")
 end
 
 
@@ -399,12 +457,6 @@ end
 --- USED FOR GATHER MARKER / REGIONS SCRIPTS ---
 ------------------------------------------------
 
-
-function UnselectAllItems()
-  for  i = 0, reaper.CountMediaItems()-1 do
-    reaper.SetMediaItemSelected(reaper.GetMediaItem(0, i), 0)
-  end
-end
 
 function set_tr_with_top_item_in_ts_as_last_touched() -- needed to ensure pasted items end up on the same track
     --W: items selection changes!

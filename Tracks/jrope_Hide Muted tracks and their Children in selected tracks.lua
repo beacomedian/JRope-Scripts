@@ -21,6 +21,12 @@
 ]]
 
 
+-- Load my common functions
+local script_path = debug.getinfo(1, "S").source:match([[^@?(.*[\/])[^\/]-$]])
+local parent_path = script_path:match([[^(.*[\/])[^\/]-[\/]$]])
+package.path = parent_path .. "Functions/?.lua;" .. package.path
+require("jrope__Common Functions")
+
 -- Function to hide a track and all its children
 local function HideTrackAndChildren(track)
     local hidden_count = 0
@@ -62,14 +68,9 @@ local function HideTrackAndChildren(track)
     return hidden_count
 end
 
-    -- Get the number of selected tracks
-    local selected_track_count = reaper.CountSelectedTracks(0)
-
     -- Check if any tracks are selected
-    if selected_track_count == 0 then
-        reaper.ShowMessageBox("No tracks selected. Please select tracks first.", "Error", 0)
-        return
-    end
+    local selected_track_count = RequireSelectedTracks("No tracks selected. Please select tracks first.")
+    if not selected_track_count then return end
 
 -- Counter for how many tracks we hide
 local total_hidden = 0

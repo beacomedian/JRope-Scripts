@@ -41,6 +41,12 @@ local proj = 0
 ----------- FUNCTIONS -----------
 ---------------------------------
 
+-- Load my common functions
+local script_path = debug.getinfo(1, "S").source:match([[^@?(.*[\/])[^\/]-$]])
+local parent_path = script_path:match([[^(.*[\/])[^\/]-[\/]$]])
+package.path = parent_path .. "Functions/?.lua;" .. package.path
+require("jrope__Common Functions")
+
 
 function main()
 
@@ -49,31 +55,11 @@ function main()
     math.randomseed(os.time())
 
 
-    -- Get the number of selected items in the project
-    local num_selected_items = reaper.CountSelectedMediaItems(0)
-
     -- Exit early if no items are selected
-    if num_selected_items == 0 then
-        reaper.ShowMessageBox("No items selected!", "Error", 0)
-        return
-    end
+    if not RequireSelectedItems() then return end
 
-    -- Table to store items grouped by track
-    local tracks_with_items = {}
-
-    -- Loop through all selected items and group them by track
-    for i = 0, num_selected_items - 1 do
-        local item = reaper.GetSelectedMediaItem(0, i)
-        local track = reaper.GetMediaItem_Track(item)
-        
-        -- If this is the first time we see this track, create a new table for it
-        if not tracks_with_items[track] then
-            tracks_with_items[track] = {}
-        end
-        
-        -- Add item to the track's table
-        table.insert(tracks_with_items[track], item)
-    end
+    -- Group the selected items by track
+    local tracks_with_items = GetSelectedItemsByTrack()
 
     -- Process each track: randomly select N items
     for track, items in pairs(tracks_with_items) do

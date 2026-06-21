@@ -46,34 +46,6 @@ require("jrope__Common Functions")
 
 
 
--- Function to get all selected items organized by track
-function getSelectedItemsByTrack()
-    local itemsByTrack = {}
-    local itemCount = reaper.CountSelectedMediaItems(0)
-    
-    if itemCount == 0 then
-        reaper.ShowMessageBox("No items selected.", "Error", 0)
-        return nil
-    end
-    
-    -- Organize items by track
-    for i = 0, itemCount - 1 do
-        local item = reaper.GetSelectedMediaItem(0, i)
-        local track = reaper.GetMediaItem_Track(item)
-        local trackNumber = reaper.GetMediaTrackInfo_Value(track, "IP_TRACKNUMBER")
-        
-        -- Initialize track table if it doesn't exist
-        if not itemsByTrack[trackNumber] then
-            itemsByTrack[trackNumber] = {}
-        end
-        
-        -- Add item to track's collection
-        table.insert(itemsByTrack[trackNumber], item)
-    end
-    
-    return itemsByTrack
-end
-
 -- Function to find the earliest start position for each track
 function findEarliestPositions(itemsByTrack)
     local earliestPositions = {}
@@ -127,10 +99,10 @@ function main()
     reaper.Undo_BeginBlock()
     
     -- Get selected items organized by track
-    local itemsByTrack = getSelectedItemsByTrack()
-    if not itemsByTrack then
+    if not RequireSelectedItems("No items selected.") then
         return -- Exit if no items selected
     end
+    local itemsByTrack = GetSelectedItemsByTrack()
     
     -- Find earliest positions
     local earliestPositions, globalEarliest = findEarliestPositions(itemsByTrack)

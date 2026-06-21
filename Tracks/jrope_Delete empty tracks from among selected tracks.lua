@@ -18,6 +18,12 @@ local r = reaper
 local proj = 0
 
 ----------- FUNCTIONS -----------
+-- Load my common functions
+local script_path = debug.getinfo(1, "S").source:match([[^@?(.*[\/])[^\/]-$]])
+local parent_path = script_path:match([[^(.*[\/])[^\/]-[\/]$]])
+package.path = parent_path .. "Functions/?.lua;" .. package.path
+require("jrope__Common Functions")
+
 -- Check if track is a folder with children
 function IsFolderWithChildren(track)
     if not track then return false end
@@ -71,18 +77,7 @@ end
 -- Track is empty
 return true
 end
--- Get the current folder nesting level at a track index
-function GetNestingLevelAtIndex(track_idx)
-    local level = 0
-    for i = 0, track_idx - 1 do
-        local t = r.GetTrack(0, i)
-        if t then
-        local depth = r.GetMediaTrackInfo_Value(t, "I_FOLDERDEPTH")
-        level = level + depth
-        end
-    end
-    return level
-end
+-- (Absolute folder depth is available as GetTrackDepth() in Common Functions.)
 -- Fix folder hierarchy after deleting a track
 function FixFolderDepthAfterDelete(track_idx, original_depth)
 -- Only need to fix if the deleted track had a negative depth (was closing folder(s))
@@ -103,11 +98,8 @@ end
 
 function main()
     -- Get selected tracks
-    local sel_track_count = r.CountSelectedTracks(0)
-        if sel_track_count == 0 then
-        r.ShowMessageBox("No tracks selected.", "Error", 0)
-        return
-        end
+    local sel_track_count = RequireSelectedTracks("No tracks selected.")
+    if not sel_track_count then return end
     -- Store selected tracks with their info
     local selected_tracks = {}
     for i = 0, sel_track_count - 1 do

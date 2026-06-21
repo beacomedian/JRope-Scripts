@@ -50,11 +50,8 @@ require("jrope__Common Functions")
 
 function main()
     -- Check if there are any selected items
-    local selected_item_count = reaper.CountSelectedMediaItems(0)
-    if selected_item_count == 0 then
-        reaper.ShowMessageBox("No items selected.", "Random Group Colors", 0)
-        return
-    end
+    local selected_item_count = RequireSelectedItems("No items selected.")
+    if not selected_item_count then return end
     
     -- Table to store group IDs and their assigned colors
     local groups = {}

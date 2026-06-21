@@ -41,50 +41,30 @@ local proj = 0
 ----------- FUNCTIONS -----------
 ---------------------------------
 
+-- Load my common functions
+local script_path = debug.getinfo(1, "S").source:match([[^@?(.*[\/])[^\/]-$]])
+local parent_path = script_path:match([[^(.*[\/])[^\/]-[\/]$]])
+package.path = parent_path .. "Functions/?.lua;" .. package.path
+require("jrope__Common Functions")
+
 
 function main()
 
 
-    -- Get the number of selected items in the project
-    local num_selected_items = reaper.CountSelectedMediaItems(0)
-
     -- Exit early if no items are selected
-    if num_selected_items == 0 then
-        reaper.ShowMessageBox("No items selected!", "Error", 0)
-        return
-    end
+    if not RequireSelectedItems() then return end
 
-    -- Table to store items grouped by track
-    local tracks_with_items = {}
-
-    -- Loop through all selected items and group them by track
-    for i = 0, num_selected_items - 1 do
-        local item = reaper.GetSelectedMediaItem(0, i)
-        local track = reaper.GetMediaItem_Track(item)
-        local item_position = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
-        
-        -- If this is the first time we see this track, create a new table for it
-        if not tracks_with_items[track] then
-            tracks_with_items[track] = {}
-        end
-        
-        -- Add item info to the track's table
-        table.insert(tracks_with_items[track], {
-            item = item,
-            position = item_position
-        })
-    end
+    -- Group the selected items by track
+    local tracks_with_items = GetSelectedItemsByTrack()
 
     -- Process each track: sort items by position and keep only first N
     for track, items in pairs(tracks_with_items) do
         -- Sort items by their timeline position (earliest first)
-        table.sort(items, function(a, b)
-            return a.position < b.position
-        end)
-        
+        SortItemsByPosition(items)
+
         -- Deselect items beyond the first N
         for i = ITEMS_TO_KEEP + 1, #items do
-            reaper.SetMediaItemSelected(items[i].item, false)
+            reaper.SetMediaItemSelected(items[i], false)
         end
     end
 

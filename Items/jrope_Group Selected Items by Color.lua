@@ -41,16 +41,17 @@ local proj = 0
 ----------- FUNCTIONS -----------
 ---------------------------------
 
+-- Load my common functions
+local script_path = debug.getinfo(1, "S").source:match([[^@?(.*[\/])[^\/]-$]])
+local parent_path = script_path:match([[^(.*[\/])[^\/]-[\/]$]])
+package.path = parent_path .. "Functions/?.lua;" .. package.path
+require("jrope__Common Functions")
+
 function main()
-  -- Get the number of selected media items
-  local item_count = reaper.CountSelectedMediaItems(0)
-  
   -- Check if any items are selected
-  if item_count == 0 then
-    reaper.ShowMessageBox("Please select at least one item", "No Items Selected", 0)
-    return
-  end
-  
+  local item_count = RequireSelectedItems("Please select at least one item")
+  if not item_count then return end
+
   -- Store all originally selected items BEFORE we start changing selection
   local original_items = {}
   for i = 0, item_count - 1 do
@@ -63,7 +64,7 @@ function main()
   -- Loop through all selected items and organize by color
   for i = 1, #original_items do
     local item = original_items[i]
-    local item_color = reaper.GetDisplayedMediaItemColor(item)
+    local item_color = GetItemDisplayedColor(item)
     
     -- Skip uncolored items if user config says so
     if not (IGNORE_UNCOLORED_ITEMS and item_color == 0) then
