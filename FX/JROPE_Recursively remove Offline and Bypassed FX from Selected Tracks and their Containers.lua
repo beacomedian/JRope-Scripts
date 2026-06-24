@@ -4,19 +4,23 @@
  * Repository: github.com/beacomedian/JRope-Scripts
  * Licence: GPL v3
  * REAPER: 7.4
- * Version: 1.2
+ * Version: 1.3
  * Provides:
     [main] . >
  * About:
-    # Removes every offline or bypassed FX from the selected tracks, descending
-    # recursively into FX containers (and containers nested inside containers,
-    # to any depth). A container that is itself offline/bypassed is removed too.
-    # Afterwards, if the cleanup left any online containers empty, the script
-    # asks whether to remove those (cascading bottom-up) as well.
+    # Removes every offline or bypassed FX from the selected tracks -- or, when
+    # any media items are selected, from every take of those items instead --
+    # descending recursively into FX containers (and containers nested inside
+    # containers, to any depth). A container that is itself offline/bypassed is
+    # removed too. Afterwards, if the cleanup left any online containers empty,
+    # the script asks whether to remove those (cascading bottom-up) as well.
  * Changelog:
-    # Initial working release. Fixed container addressing (last-slot bug) and
-    # added correct depth-aware recursion for nested containers. Added optional
-    # prompt to remove containers left empty by the cleanup.
+    # v1.3: Also operate on selected items' take FX (all takes) when any items
+    #       are selected; otherwise operate on selected tracks as before. Track
+    #       and take FX chains are handled through a shared host adapter.
+    # v1.2: Initial working release. Fixed container addressing (last-slot bug)
+    #       and added correct depth-aware recursion for nested containers. Added
+    #       optional prompt to remove containers left empty by the cleanup.
  * To Do:
     #
 ]]
@@ -50,22 +54,61 @@ local parent_path = script_path:match([[^(.*[\/])[^\/]-[\/]$]])
 package.path = parent_path .. "Functions/?.lua;" .. package.path
 require("jrope__Common Functions")
 
+--[[
+  A "host" abstracts a single FX chain so the recursion engine below never has to
+  know whether it is operating on a track's FX or a take's FX. Each host is a table
+  of closures over its target object, wrapping the matching REAPER API
+  (TrackFX_* / TakeFX_*). The two APIs share identical signatures and the same
+  REAPER-7 container addressing, so the engine is reused unchanged.
+]]
+local function makeTrackHost(track)
+  return {
+    label = "track",
+    GetCount           = function()           return r.TrackFX_GetCount(track) end,
+    GetNamedConfigParm = function(addr, parm)  return r.TrackFX_GetNamedConfigParm(track, addr, parm) end,
+    GetOffline         = function(addr)        return r.TrackFX_GetOffline(track, addr) end,
+    GetEnabled         = function(addr)        return r.TrackFX_GetEnabled(track, addr) end,
+    GetFXName          = function(addr)        return r.TrackFX_GetFXName(track, addr, "") end,
+    Delete             = function(addr)        return r.TrackFX_Delete(track, addr) end,
+    name               = function()
+      local ok, n = r.GetTrackName(track, "")
+      return ok and n or "Unnamed Track"
+    end,
+  }
+end
+
+local function makeTakeHost(take)
+  return {
+    label = "take",
+    GetCount           = function()           return r.TakeFX_GetCount(take) end,
+    GetNamedConfigParm = function(addr, parm)  return r.TakeFX_GetNamedConfigParm(take, addr, parm) end,
+    GetOffline         = function(addr)        return r.TakeFX_GetOffline(take, addr) end,
+    GetEnabled         = function(addr)        return r.TakeFX_GetEnabled(take, addr) end,
+    GetFXName          = function(addr)        return r.TakeFX_GetFXName(take, addr, "") end,
+    Delete             = function(addr)        return r.TakeFX_Delete(take, addr) end,
+    name               = function()
+      local n = r.GetTakeName(take)
+      return (n and n ~= "") and n or "Unnamed Take"
+    end,
+  }
+end
+
 -- Is the FX at this (already-resolved) address a container?
-local function isContainer(track, fx_address)
-  local ok, fx_type = r.TrackFX_GetNamedConfigParm(track, fx_address, "fx_type")
+local function isContainer(host, fx_address)
+  local ok, fx_type = host.GetNamedConfigParm(fx_address, "fx_type")
   return ok and fx_type == "Container"
 end
 
 -- Number of direct child FX inside the container at this address (nil if not a container).
-local function getContainerCount(track, fx_address)
-  local ok, cnt = r.TrackFX_GetNamedConfigParm(track, fx_address, "container_count")
+local function getContainerCount(host, fx_address)
+  local ok, cnt = host.GetNamedConfigParm(fx_address, "container_count")
   if not ok then return nil end
   return tonumber(cnt) or 0
 end
 
 -- Should this FX be removed?
-local function shouldRemove(track, fx_address)
-  return r.TrackFX_GetOffline(track, fx_address) or not r.TrackFX_GetEnabled(track, fx_address)
+local function shouldRemove(host, fx_address)
+  return host.GetOffline(fx_address) or not host.GetEnabled(fx_address)
 end
 
 --[[
@@ -85,7 +128,7 @@ end
   not-yet-visited (lower) child, and we re-read the live counts every step so
   the addressing stays correct as items disappear.
 ]]
-local function removeInContainer(track, container_id, parent_count, parent_diff, depth, indent)
+local function removeInContainer(host, container_id, parent_count, parent_diff, depth, indent)
   indent = indent or "  "
 
   if depth > MAX_DEPTH then
@@ -94,7 +137,7 @@ local function removeInContainer(track, container_id, parent_count, parent_diff,
   end
 
   local removed = 0
-  local i = getContainerCount(track, CONTAINER_BASE + container_id)
+  local i = getContainerCount(host, CONTAINER_BASE + container_id)
   if not i or i <= 0 then
     Log("%sEmpty or non-container (count=%s)\n", indent, tostring(i))
     return 0
@@ -104,7 +147,7 @@ local function removeInContainer(track, container_id, parent_count, parent_diff,
 
   while i >= 1 do
     -- Deleting a *direct* child shrinks this container's count; re-read it.
-    local count = getContainerCount(track, CONTAINER_BASE + container_id) or 0
+    local count = getContainerCount(host, CONTAINER_BASE + container_id) or 0
     if i > count then i = count end
     if i < 1 then break end
 
@@ -112,7 +155,7 @@ local function removeInContainer(track, container_id, parent_count, parent_diff,
     local fx_id = container_id + diff * i
     local fx_address = CONTAINER_BASE + fx_id
 
-    local ok_name, name = r.TrackFX_GetFXName(track, fx_address, "")
+    local ok_name, name = host.GetFXName(fx_address)
     if not ok_name then
       Log("%s  WARNING: cannot access child %d (addr %d)\n", indent, i, fx_address)
       i = i - 1
@@ -121,14 +164,14 @@ local function removeInContainer(track, container_id, parent_count, parent_diff,
 
     -- Descend into nested containers first, passing this container's *current*
     -- child count and diff so the nested addressing resolves correctly.
-    if isContainer(track, fx_address) then
+    if isContainer(host, fx_address) then
       Log("%s  Child %d '%s' is a nested container\n", indent, i, name)
-      removed = removed + removeInContainer(track, fx_id, count, diff, depth + 1, indent .. "  ")
+      removed = removed + removeInContainer(host, fx_id, count, diff, depth + 1, indent .. "  ")
     end
 
-    if shouldRemove(track, fx_address) then
+    if shouldRemove(host, fx_address) then
       Log("%s  REMOVING child %d '%s'\n", indent, i, name)
-      r.TrackFX_Delete(track, fx_address)
+      host.Delete(fx_address)
       removed = removed + 1
     else
       Log("%s  Keeping child %d '%s'\n", indent, i, name)
@@ -141,32 +184,31 @@ local function removeInContainer(track, container_id, parent_count, parent_diff,
   return removed
 end
 
-local function processTrack(track)
-  local ok_name, track_name = r.GetTrackName(track, "")
-  Log("\n=== Track: %s ===\n", ok_name and track_name or "Unnamed Track")
+local function processHost(host)
+  Log("\n=== %s: %s ===\n", host.label == "take" and "Take" or "Track", host.name())
 
   local removed = 0
   -- Walk top-level FX high->low. Re-read the count each step because deleting a
   -- top-level FX also changes the diff used to address container children below.
-  local fx = r.TrackFX_GetCount(track) - 1
+  local fx = host.GetCount() - 1
   while fx >= 0 do
-    local count = r.TrackFX_GetCount(track)
+    local count = host.GetCount()
     if fx > count - 1 then fx = count - 1 end
     if fx < 0 then break end
 
-    local ok_name2, fx_name = r.TrackFX_GetFXName(track, fx, "")
+    local ok_name2, fx_name = host.GetFXName(fx)
     fx_name = ok_name2 and fx_name or "Unknown FX"
 
-    if isContainer(track, fx) then
+    if isContainer(host, fx) then
       -- Top-level container: raw id is the 1-based slot (fx + 1),
-      -- parent scope is the track itself (parent_count = track FX count).
+      -- parent scope is the host itself (parent_count = chain FX count).
       Log("Top-level container at slot %d ('%s')\n", fx, fx_name)
-      removed = removed + removeInContainer(track, fx + 1, count, 0, 0, "  ")
+      removed = removed + removeInContainer(host, fx + 1, count, 0, 0, "  ")
     end
 
-    if shouldRemove(track, fx) then
+    if shouldRemove(host, fx) then
       Log("REMOVING top-level FX %d ('%s')\n", fx, fx_name)
-      r.TrackFX_Delete(track, fx)
+      host.Delete(fx)
       removed = removed + 1
     end
 
@@ -187,19 +229,19 @@ end
   No deletions happen here, so the live addressing stays stable and we can
   iterate low->high.
 ]]
-local function countEmptyInContainer(track, container_id, parent_count, parent_diff, depth)
+local function countEmptyInContainer(host, container_id, parent_count, parent_diff, depth)
   if depth > MAX_DEPTH then return 0, 1 end  -- treat as non-empty; don't recurse further
 
-  local count = getContainerCount(track, CONTAINER_BASE + container_id) or 0
+  local count = getContainerCount(host, CONTAINER_BASE + container_id) or 0
   local pruned, remaining = 0, 0
 
   for i = 1, count do
     local diff = (depth == 0) and (parent_count + 1) or (parent_count + 1) * parent_diff
     local fx_address = CONTAINER_BASE + container_id + diff * i
 
-    if isContainer(track, fx_address) then
+    if isContainer(host, fx_address) then
       local child_pruned, child_remaining =
-        countEmptyInContainer(track, container_id + diff * i, count, diff, depth + 1)
+        countEmptyInContainer(host, container_id + diff * i, count, diff, depth + 1)
       pruned = pruned + child_pruned
       if child_remaining == 0 then
         pruned = pruned + 1   -- this child container would itself become empty
@@ -214,12 +256,12 @@ local function countEmptyInContainer(track, container_id, parent_count, parent_d
   return pruned, remaining
 end
 
-local function countEmptyContainers(track)
+local function countEmptyContainers(host)
   local total = 0
-  local count = r.TrackFX_GetCount(track)
+  local count = host.GetCount()
   for fx = 0, count - 1 do
-    if isContainer(track, fx) then
-      local child_pruned, child_remaining = countEmptyInContainer(track, fx + 1, count, 0, 0)
+    if isContainer(host, fx) then
+      local child_pruned, child_remaining = countEmptyInContainer(host, fx + 1, count, 0, 0)
       total = total + child_pruned
       if child_remaining == 0 then total = total + 1 end
     end
@@ -229,14 +271,14 @@ end
 
 -- Depth-first removal of empty containers. Because children are pruned before
 -- the parent is re-checked, a single pass cascades bottom-up.
-local function pruneEmptyInContainer(track, container_id, parent_count, parent_diff, depth)
+local function pruneEmptyInContainer(host, container_id, parent_count, parent_diff, depth)
   if depth > MAX_DEPTH then return 0 end
 
   local removed = 0
-  local i = getContainerCount(track, CONTAINER_BASE + container_id) or 0
+  local i = getContainerCount(host, CONTAINER_BASE + container_id) or 0
 
   while i >= 1 do
-    local count = getContainerCount(track, CONTAINER_BASE + container_id) or 0
+    local count = getContainerCount(host, CONTAINER_BASE + container_id) or 0
     if i > count then i = count end
     if i < 1 then break end
 
@@ -244,12 +286,12 @@ local function pruneEmptyInContainer(track, container_id, parent_count, parent_d
     local fx_id = container_id + diff * i
     local fx_address = CONTAINER_BASE + fx_id
 
-    if isContainer(track, fx_address) then
-      removed = removed + pruneEmptyInContainer(track, fx_id, count, diff, depth + 1)
-      if (getContainerCount(track, fx_address) or 0) == 0 then
-        local _, name = r.TrackFX_GetFXName(track, fx_address, "")
+    if isContainer(host, fx_address) then
+      removed = removed + pruneEmptyInContainer(host, fx_id, count, diff, depth + 1)
+      if (getContainerCount(host, fx_address) or 0) == 0 then
+        local _, name = host.GetFXName(fx_address)
         Log("%sREMOVING empty container '%s'\n", string.rep("  ", depth + 1), name or "")
-        r.TrackFX_Delete(track, fx_address)
+        host.Delete(fx_address)
         removed = removed + 1
       end
     end
@@ -260,20 +302,20 @@ local function pruneEmptyInContainer(track, container_id, parent_count, parent_d
   return removed
 end
 
-local function pruneEmptyContainers(track)
+local function pruneEmptyContainers(host)
   local removed = 0
-  local fx = r.TrackFX_GetCount(track) - 1
+  local fx = host.GetCount() - 1
   while fx >= 0 do
-    local count = r.TrackFX_GetCount(track)
+    local count = host.GetCount()
     if fx > count - 1 then fx = count - 1 end
     if fx < 0 then break end
 
-    if isContainer(track, fx) then
-      removed = removed + pruneEmptyInContainer(track, fx + 1, count, 0, 0)
-      if (getContainerCount(track, fx) or 0) == 0 then
-        local _, name = r.TrackFX_GetFXName(track, fx, "")
+    if isContainer(host, fx) then
+      removed = removed + pruneEmptyInContainer(host, fx + 1, count, 0, 0)
+      if (getContainerCount(host, fx) or 0) == 0 then
+        local _, name = host.GetFXName(fx)
         Log("REMOVING empty top-level container '%s'\n", name or "")
-        r.TrackFX_Delete(track, fx)
+        host.Delete(fx)
         removed = removed + 1
       end
     end
@@ -283,27 +325,59 @@ local function pruneEmptyContainers(track)
   return removed
 end
 
+--[[
+  Decide what to operate on and build the list of FX hosts:
+    * If any media items are selected, process every take of those items.
+    * Otherwise, process the selected tracks.
+  Returns (hosts, mode) where mode is "item" or "track".
+]]
+local function gatherHosts()
+  local hosts = {}
+
+  local item_count = r.CountSelectedMediaItems(proj)
+  if item_count > 0 then
+    for i = 0, item_count - 1 do
+      local item = r.GetSelectedMediaItem(proj, i)
+      for t = 0, r.CountTakes(item) - 1 do          -- every take, not just the active one
+        local take = r.GetTake(item, t)
+        if take then hosts[#hosts + 1] = makeTakeHost(take) end
+      end
+    end
+    return hosts, "item"
+  end
+
+  local track_count = r.CountSelectedTracks(proj)
+  for i = 0, track_count - 1 do
+    hosts[#hosts + 1] = makeTrackHost(r.GetSelectedTrack(proj, i))
+  end
+  return hosts, "track"
+end
+
 function main()
   if ENABLE_DEBUG_LOG then r.ClearConsole() end
   Log("=== Remove Offline/Bypassed FX (recursive) ===\n")
 
-  local selected_track_count = r.CountSelectedTracks(proj)
-  if selected_track_count == 0 then
-    r.ShowMessageBox("No tracks selected. Please select one or more tracks.",
-                     "Remove Offline/Bypassed FX", 0)
+  local hosts, mode = gatherHosts()
+  -- "take(s)" reads better than "item(s)" since multi-take items expand into
+  -- several hosts; tracks map one-to-one.
+  local unit = (mode == "item") and "take" or "track"
+
+  if #hosts == 0 then
+    r.ShowMessageBox("No tracks or items selected. Please select one or more tracks, " ..
+                     "or one or more items.", "Remove Offline/Bypassed FX", 0)
     return
   end
 
   local total_removed = 0
-  for i = 0, selected_track_count - 1 do
-    total_removed = total_removed + processTrack(r.GetSelectedTrack(proj, i))
+  for _, host in ipairs(hosts) do
+    total_removed = total_removed + processHost(host)
   end
   Log("\n=== Offline/bypassed pass: removed %d FX ===\n", total_removed)
 
   -- Optional follow-up: offer to remove any containers the cleanup emptied out.
   local empty_count = 0
-  for i = 0, selected_track_count - 1 do
-    empty_count = empty_count + countEmptyContainers(r.GetSelectedTrack(proj, i))
+  for _, host in ipairs(hosts) do
+    empty_count = empty_count + countEmptyContainers(host)
   end
 
   local empties_removed = 0
@@ -313,23 +387,23 @@ function main()
       "%d container(s) are now empty. Remove the empty container(s) too?",
       total_removed, empty_count)
     if r.ShowMessageBox(prompt, "Remove Offline/Bypassed FX", 4) == 6 then  -- 4 = Yes/No, 6 = Yes
-      for i = 0, selected_track_count - 1 do
-        empties_removed = empties_removed + pruneEmptyContainers(r.GetSelectedTrack(proj, i))
+      for _, host in ipairs(hosts) do
+        empties_removed = empties_removed + pruneEmptyContainers(host)
       end
       Log("\n=== Empty-container pass: removed %d container(s) ===\n", empties_removed)
     end
   end
 
-  Log("\n=== SUMMARY: %d FX + %d empty container(s) from %d track(s) ===\n",
-      total_removed, empties_removed, selected_track_count)
+  Log("\n=== SUMMARY: %d FX + %d empty container(s) from %d %s(s) ===\n",
+      total_removed, empties_removed, #hosts, unit)
 
   if total_removed == 0 and empty_count == 0 then
-    r.ShowMessageBox("No offline or bypassed FX found on the selected tracks.",
+    r.ShowMessageBox(string.format("No offline or bypassed FX found on the selected %s(s).", unit),
                      "Remove Offline/Bypassed FX", 0)
   else
     r.ShowMessageBox(string.format(
-      "Removed %d offline/bypassed FX and %d empty container(s) from %d selected track(s).",
-      total_removed, empties_removed, selected_track_count), "Remove Offline/Bypassed FX", 0)
+      "Removed %d offline/bypassed FX and %d empty container(s) from %d %s(s).",
+      total_removed, empties_removed, #hosts, unit), "Remove Offline/Bypassed FX", 0)
   end
 end
 
