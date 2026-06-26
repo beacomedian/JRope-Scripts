@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="ff1b4994252d3c29fd0b8fc7a847568ba843e772">
+<index version="1" name="JRope Scripts" commit="baa40ed7b05077c2f2b3339101c3e3a61c0ab8d6">
   <category name="Functions">
     <reapack name="jrope__Common Functions.lua" type="script" desc="Jrope Common Functions">
       <metadata>
@@ -24,6 +24,33 @@
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/7b57a8dea42d3b9768883d0bf932029fc923b999/FX/jrope_AM_Playdium_Load_Selected_Media_Items_into_RS5K_NOGLUE_Multi.lua</source>
       </version>
     </reapack>
+    <reapack name="jrope_FX List.lua" type="script" desc="FX List">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.3" author="Jesse Rope" time="2026-06-26T00:09:50Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/6b186723876cddef472e15f5bc0146fcc1cc38ba/FX/jrope_FX%20List.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Move Item FX from Selected Items to their Track.lua" type="script" desc="Move Item FX from Selected Items to their Track">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.1" author="Jesse Rope" time="2026-06-24T15:20:46Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/78c81ae08b58f883511c3ce5fcd92b46e38b8757/FX/jrope_Move%20Item%20FX%20from%20Selected%20Items%20to%20their%20Track.lua</source>
+      </version>
+      <version name="1.2" author="Jesse Rope" time="2026-06-24T16:20:37Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/d84021fa7b83e6d1964c1dcec0bb7061c0b5a839/FX/jrope_Move%20Item%20FX%20from%20Selected%20Items%20to%20their%20Track.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Move Track FX from Parent Track to Selected Items.lua" type="script" desc="Move Track FX from Parent Track to Selected Items">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2026-06-24T15:20:46Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/78c81ae08b58f883511c3ce5fcd92b46e38b8757/FX/jrope_Move%20Track%20FX%20from%20Parent%20Track%20to%20Selected%20Items.lua</source>
+      </version>
+    </reapack>
     <reapack name="jrope_Offline Bypassed FX on Selected Tracks.lua" type="script" desc="FX; Offline all inactive bypassed FX on selected tracks.lua">
       <version name="1.1" author="Archie (modified by Jesse Rope)" time="2026-05-22T00:34:28Z">
         <changelog><![CDATA[v.1.0
@@ -45,6 +72,14 @@ v.1.1 JRope Modification
     # Fixed bypass envelope detection: use TrackFX_GetParamFromIdent(':bypass')
       instead of hardcoded parameter index 0]]></changelog>
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/399b7edb30965f3ea09aee221fed09f1562c6f70/FX/jrope_Online%20Unbypassed%20FX%20on%20Selected%20Tracks.lua</source>
+      </version>
+    </reapack>
+    <reapack name="JROPE_Recursively remove Offline and Bypassed FX from Selected Tracks and their Containers.lua" type="script" desc="Recursively remove Offline and Bypassed FX from Selected Tracks and their Containers">
+      <version name="1.2" author="Jesse Rope" time="2026-06-22T21:34:38Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/3f221460ea6912f830858e78c19b6e0312588368/FX/JROPE_Recursively%20remove%20Offline%20and%20Bypassed%20FX%20from%20Selected%20Tracks%20and%20their%20Containers.lua</source>
+      </version>
+      <version name="1.3" author="Jesse Rope" time="2026-06-24T15:20:29Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/22370ee612332afb9aa8a20b597db722e3aae866/FX/JROPE_Recursively%20remove%20Offline%20and%20Bypassed%20FX%20from%20Selected%20Tracks%20and%20their%20Containers.lua</source>
       </version>
     </reapack>
     <reapack name="kusa_Setup Compactor from selected to hovered track.lua" type="script" desc="kusa_Setup kH Compactor from selected to hovered track">
@@ -158,6 +193,14 @@ v.1.1 JRope Modification
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e685a56a6932bfef4c1888727ebe6c1b9a3c86f1/Items/jrope_Randomly%20select%20N%20items%20from%20currently%20selected%20items.lua</source>
       </version>
     </reapack>
+    <reapack name="jrope_Randomly Space Selected Items within Time Selection.lua" type="script" desc="Random Item Spacer and Muter">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2026-06-22T21:34:38Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/3f221460ea6912f830858e78c19b6e0312588368/Items/jrope_Randomly%20Space%20Selected%20Items%20within%20Time%20Selection.lua</source>
+      </version>
+    </reapack>
     <reapack name="jrope_Replace Missing Source Wav with Flac - Search.lua" type="script" desc="Relink missing WAV Source with FLAC">
       <metadata>
         <link rel="website">https://www.jesserope.com</link>
@@ -180,6 +223,14 @@ v.1.1 JRope Modification
       </metadata>
       <version name="1.0" author="Jesse Rope" time="2024-09-15T01:59:42Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/Items/jrope_Select%20items%20after%20selected%20items%20on%20same%20track.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Sort Move selected items to the start of contiguous item group.lua" type="script" desc="Sort - Move selected items to the start of contiguous item group">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2026-06-24T15:36:40Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/9d61662faa74a778db99d812c1ee3e4c95d72af3/Items/jrope_Sort%20Move%20selected%20items%20to%20the%20start%20of%20contiguous%20item%20group.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_Sort Selected Items By Color and Mute Status - Maintaining Position.lua" type="script" desc="Rearrange Selected Item Position Based on Color and Mute State, maintaining original spacing/positions">
@@ -375,12 +426,28 @@ v.1.1 JRope Modification
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e1329dea41f97e022411a2336638669c8989e407/Various/jrope_Contextual%20mute.lua</source>
       </version>
     </reapack>
+    <reapack name="jrope_Copy Time Selection Length In Milliseconds.lua" type="script" desc="Copy Time Selection Length In Milliseconds">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2026-06-26T00:10:08Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/baa40ed7b05077c2f2b3339101c3e3a61c0ab8d6/Various/jrope_Copy%20Time%20Selection%20Length%20In%20Milliseconds.lua</source>
+      </version>
+    </reapack>
     <reapack name="jrope_Import Source Files to Best Matched Track.lua" type="script" desc="Import Files to Best Match Track">
       <metadata>
         <link rel="website">https://www.jesserope.com</link>
       </metadata>
       <version name="1.0" author="Jesse Rope" time="2026-06-18T17:10:36Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/eb82d87ef1d4df87d396cbcac209508ab2033185/Various/jrope_Import%20Source%20Files%20to%20Best%20Matched%20Track.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Open Global Autosave Backups Path.lua" type="script" desc="Open Global Backups Path">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2026-06-26T00:08:01Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/67f7e496ee0cec648ccb0aef3febb3471fdeb8da/Various/jrope_Open%20Global%20Autosave%20Backups%20Path.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_Play Toggle Double Speed.lua" type="script" desc="Play Toggle double Speed and Reset Playrate on Stop">
