@@ -4,7 +4,7 @@
  * Repository: github.com/beacomedian/JRope-Scripts
  * Licence: GPL v3
  * REAPER: 7.4
- * Version: 1.3
+ * Version: 1.5
  * Provides:
    [main] . >
  * Link: https://www.jesserope.com
@@ -46,6 +46,12 @@
    #        Marker style is the CONTAINER_MARKER_STYLE config: "triangle",
    #        "square", or "bracket". Containers keep the normal bypass/offline
    #        fade and strikeout.
+   # v1.4 - Moved the right-click quick-add FX list (MENU_QUICKFX) into the
+   #        user-settable config block with instructions on naming FX for
+   #        TrackFX_AddByName.
+   # v1.5 - Fixed crash on exit ("bad argument #2 to 'format'"): gfx.dock(-1)
+   #        needs placeholder args to return the window coords; added a guard so
+   #        missing coords no longer crash exitScript.
  * To Do:
    #
 
@@ -88,6 +94,29 @@ MFXlist =
   -- How to mark FX containers in the list: "triangle", "square", or "bracket".
   -- (triangle/square use glyphs that depend on the GUI font; bracket is pure ASCII.)
   CONTAINER_MARKER_STYLE = "triangle",
+
+  ----------------------------------------------------------------------------
+  -- Quick-add FX menu. These entries appear at the top of the right-click menu
+  -- (over a track's FX area); clicking one inserts that FX on the track.
+  --
+  -- Each string is passed straight to reaper.TrackFX_AddByName, so it must be a
+  -- name REAPER can resolve. What to put here:
+  --   * The FX name exactly as it shows in REAPER's FX browser / Add FX list,
+  --     e.g. "ReaEQ", "ReaComp", "ReaDelay".
+  --   * To force a specific format when the name is ambiguous, prefix with the
+  --     type and a colon (no space):
+  --        "VST:ReaEQ"      "VST3:Pro-Q 3"     "VSTi:Vital"
+  --        "JS:Volume"      "AU:AUDelay"       "CLAP:Surge XT"
+  --        "VIDEO:..." / "REC:..." are also valid prefixes.
+  --   * For VSTs you may also use the file name, e.g. "ReaEQ.vst3".
+  -- Matching is case-sensitive and matches the start of the name, so the more
+  -- exact the string, the more reliable the insert. If an entry can't be
+  -- resolved, REAPER simply adds nothing for that click.
+  --
+  -- Add, remove, or reorder freely; the menu and item count update automatically.
+  -- An empty list { } hides the quick-add section entirely.
+  ----------------------------------------------------------------------------
+  MENU_QUICKFX = {"ReaEQ", "ReaComp", "Pro-Q 3", "Little Plate", "Altiverb"},
 
   -- Marker strings wrapped around a container's name, keyed by CONTAINER_MARKER_STYLE.
   CONTAINER_MARKERS = {
@@ -139,11 +168,10 @@ MFXlist =
   CLICK_RESOX = 30, -- maybe should not really care about horizontal moves?
   CLICK_RESOY = 10,
 
-  -- Right click menu
+  -- Right click menu (MENU_QUICKFX is user-configurable; see the user-settable block above)
   MENU_STR = "Info|Quit",
   MENU_SHOWINFO = 1,
   MENU_QUIT = 2,
-  MENU_QUICKFX = {"ReaEQ", "ReaComp", "ReaFIR", "ReaDelay"}, -- To appear on right-click menu
 
   -- Flag constants for TrackFX_Show(track, index, showFlag)
   FXCHAIN_HIDE = 0,
@@ -1282,12 +1310,16 @@ end -- handleMouse
 -- Write EXSTATE info
 local function exitScript()
 
-  local dockstate, wx, wy, ww, wh = gfx.dock(-1)
+  -- gfx.dock(-1) alone returns only the dock state; pass placeholder args so the
+  -- window x/y/w/h come back as the extra return values.
+  local dockstate, wx, wy, ww, wh = gfx.dock(-1, 0, 0, 0, 0)
   local dockstr = string.format("%d", dockstate)
   rpr.SetExtState(MFXlist.SCRIPT_NAME, "dock", dockstr, true)
 
-  local coordstr = string.format("%d,%d,%d,%d", wx, wy, ww, wh)
-  rpr.SetExtState(MFXlist.SCRIPT_NAME, "coords", coordstr, true)
+  if wx and wy and ww and wh then -- guard: don't crash on exit if coords are unavailable
+    local coordstr = string.format("%d,%d,%d,%d", wx, wy, ww, wh)
+    rpr.SetExtState(MFXlist.SCRIPT_NAME, "coords", coordstr, true)
+  end
 
   rpr.SetExtState(MFXlist.SCRIPT_NAME, "version", MFXlist.SCRIPT_VERSION, true)
 

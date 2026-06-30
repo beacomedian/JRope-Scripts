@@ -31,7 +31,7 @@
 local FRAME_BUDGET_MS = 20
 
 -- Set to true to print debug output to the REAPER console.
-ENABLE_DEBUG_LOG = true
+ENABLE_DEBUG_LOG = false
 
 -- Maximum random placement attempts per item before giving up.
 local MAX_ATTEMPTS = 2000

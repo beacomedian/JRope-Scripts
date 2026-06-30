@@ -24,7 +24,7 @@
 $folder = "E:\Audio Projects\zPeaks"
 
 # MONTHS - Delete files older than this many months
-$monthsOld = 24
+$monthsOld = 12
 
 # RECYCLE BIN - Set to $true to send to Recycle Bin, $false to use alternate path
 $useRecycleBin = $true

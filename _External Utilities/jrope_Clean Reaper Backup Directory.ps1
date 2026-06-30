@@ -6,8 +6,8 @@
  # Version: 1.2
  # Link: https://www.jesserope.com
  # About:
+    # Intended for a shared backup path across all projects
     # Keeps only the X most recent backup files for each session ID
-    # Works best for a shared backup path across all projects.
     # Use amagalma_Backup Limit scripts if you have project-based backup locations   
  # Changelog:
     # Initial Release
