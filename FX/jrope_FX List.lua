@@ -4,7 +4,7 @@
  * Repository: github.com/beacomedian/JRope-Scripts
  * Licence: GPL v3
  * REAPER: 7.4
- * Version: 1.5
+ * Version: 1.6
  * Provides:
    [main] . >
  * Link: https://www.jesserope.com
@@ -52,6 +52,11 @@
    # v1.5 - Fixed crash on exit ("bad argument #2 to 'format'"): gfx.dock(-1)
    #        needs placeholder args to return the window coords; added a guard so
    #        missing coords no longer crash exitScript.
+   # v1.6 - Fixed crash on project-tab switch ("bad argument #1 to
+   #        'TrackFX_GetOpen' (MediaTrack expected)"): openwin_list could hold
+   #        track pointers from a closed/previous project. manageOpenWindows now
+   #        validates each track with ValidatePtr2 and drops stale entries before
+   #        calling TrackFX_GetOpen.
  * To Do:
    #
 
@@ -1014,12 +1019,18 @@ local function manageOpenWindows()
   if MFXlist.openwin_list.length > 0 then -- is it faster to check head for nil?
     local ptr = MFXlist.openwin_list.head
     while ptr do
-      if not rpr.TrackFX_GetOpen(ptr.elem[1], ptr.elem[2]) then -- someone closed, but not me
+      local nextptr = ptr.next -- grab before any remove() unlinks ptr
+      -- Track pointers go stale when the project tab changes (the FX window's
+      -- track belongs to the old project). Drop stale entries instead of passing
+      -- an invalid pointer to TrackFX_GetOpen, which crashes ("MediaTrack expected").
+      if not rpr.ValidatePtr2(CURR_PROJ, ptr.elem[1], "MediaTrack*") then
+        MFXlist.openwin_list:remove(ptr)
+      elseif not rpr.TrackFX_GetOpen(ptr.elem[1], ptr.elem[2]) then -- someone closed, but not me
         MFXlist.openwin_list:remove(ptr)
         focusTCP()
         return
       end
-      ptr = ptr.next
+      ptr = nextptr
     end
   end
 
