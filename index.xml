@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="9a5c1b288ec025e24e5c826bff9612c797017165">
+<index version="1" name="JRope Scripts" commit="f1d9f01ddd27f604f92e8a36a35d708a83c5f827">
   <category name="Functions">
     <reapack name="jrope__Common Functions.lua" type="script" desc="Jrope Common Functions">
       <metadata>
@@ -33,6 +33,9 @@
       </version>
       <version name="1.5" author="Jesse Rope" time="2026-06-30T16:41:59Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/9a5c1b288ec025e24e5c826bff9612c797017165/FX/jrope_FX%20List.lua</source>
+      </version>
+      <version name="1.6" author="Jesse Rope" time="2026-06-30T23:51:26Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/661b2a2e19d51e374af178f7c6a5823eb91b562d/FX/jrope_FX%20List.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_Move Item FX from Selected Items to their Track.lua" type="script" desc="Move Item FX from Selected Items to their Track">
@@ -333,15 +336,12 @@ v.1.1 JRope Modification
     </reapack>
   </category>
   <category name="Media Explorer">
-    <reapack name="jrope_acendan Add custom user columns for Basehead Metadata.lua" type="script" desc="Basehead iXML Metadata Columns">
+    <reapack name="jrope_Add and Manage Media Explorer User Columns.lua" type="script" desc="Media Explorer Metadata Column Manager">
       <metadata>
-        <link rel="website">https://aaroncendan.me</link>
+        <link rel="website">https://www.jesserope.com</link>
       </metadata>
-      <version name="1.6" author="Aaron Cendan, modified by Jesse Rope" time="2026-05-21T23:13:12Z">
-        <changelog><![CDATA[#1.5 Update LuaUtils path with case sensitivity for Linux
-#1.6 Modified iXML colums to pull in Basehead-generated fields
-#1.6 Pulled in ascenden utilities functions so the script runs standalone]]></changelog>
-        <source main="mediaexplorer">https://github.com/beacomedian/JRope-Scripts/raw/02388ee1c42892f5938a2a296d1fc9c4d557b44a/Media%20Explorer/jrope_acendan%20Add%20custom%20user%20columns%20for%20Basehead%20Metadata.lua</source>
+      <version name="1.0" author="Jesse Rope" time="2026-07-03T05:54:53Z">
+        <source main="mediaexplorer">https://github.com/beacomedian/JRope-Scripts/raw/77bc8d1f3f7a06188336a35cea9e42872e4238a8/Media%20Explorer/jrope_Add%20and%20Manage%20Media%20Explorer%20User%20Columns.lua</source>
       </version>
     </reapack>
   </category>
@@ -435,6 +435,14 @@ v.1.1 JRope Modification
       </metadata>
       <version name="1.0" author="Jesse Rope" time="2026-06-26T00:10:08Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/baa40ed7b05077c2f2b3339101c3e3a61c0ab8d6/Various/jrope_Copy%20Time%20Selection%20Length%20In%20Milliseconds.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Export Mix Change List to HTML.lua" type="script" desc="JROPE - Export Mix Change List to HTML">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2026-07-03T05:55:29Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/f1d9f01ddd27f604f92e8a36a35d708a83c5f827/Various/jrope_Export%20Mix%20Change%20List%20to%20HTML.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_Import Source Files to Best Matched Track.lua" type="script" desc="Import Files to Best Match Track">
