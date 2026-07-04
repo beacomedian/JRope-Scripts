@@ -4,7 +4,7 @@
  * Repository: github.com/beacomedian/JRope-Scripts
  * Licence: GPL v3
  * REAPER: 7.4
- * Version: 2.4
+ * Version: 2.8
  * Provides:
     [main] . >
  * Link: https://www.jesserope.com
@@ -16,6 +16,14 @@
     # Results show in-window; user can remove rows before a confirmed move.
     # Settings persist between launches.
  * Changelog:
+    # 2.8 - Keep subproject render proxies: a "<sub>.rpp-PROX" (and its peaks) is now
+      kept whenever the "<sub>.rpp" it renders from is referenced.
+    # 2.7 - Moves now preserve each file's folder hierarchy inside the trash folder.
+      Added an "In unused folder" section to restore files individually or all at once.
+    # 2.6 - Animated progress bar while scanning (scan now runs incrementally as a
+      coroutine, so the window stays responsive on large projects).
+    # 2.5 - Scan .rpp files recursively so nested subprojects also count as sessions
+      whose referenced media is protected from cleanup.
     # 2.4 - Multiple source folders, recursive scanning, open trash folder when done.
     # 2.3 - Settings persist between launches (ext-state). Added About section.
     # 2.2 - Added optional console logging for diagnosing scan results.
@@ -23,7 +31,7 @@
     # 2.0 - Rebuilt around a ReaImGui window. Added ignore-pattern input.
     # 1.0 - Initial console-based release (adapted from fbeauvaisc).
  * To Do:
-    # Optional: progress feedback for very large projects.
+    #
 
 
 ]]
@@ -55,6 +63,12 @@ local DEFAULT_TRASH_SUBFOLDER = "temp_trash"
 -- can reference hundreds of files, and the console only keeps ~300 lines, so
 -- without a cap the important paths at the top get pushed out of view.
 local LOG_MAX_LIST = 25
+
+-- How many milliseconds of scan work to do per frame. The scan runs as a
+-- coroutine that pauses (yields) once this budget is spent, so the progress
+-- window can repaint. Higher = faster scan, choppier animation; lower =
+-- smoother animation, slower scan.
+local SCAN_FRAME_BUDGET_MS = 30
 
 -- Settings are remembered between launches under this name in REAPER's global
 -- ext-state store (persists in reaper-extstate.ini). Change it only if you'd
@@ -105,6 +119,15 @@ local state = {
     project_dir = nil,
     source_dirs = {},   -- list of absolute source folders (each ends in SEP)
     trash_dir   = nil,
+    -- Live scan state (a scan runs incrementally across defer frames so the
+    -- window can show a progress bar instead of freezing on big projects).
+    scanning      = false,  -- is a scan in progress right now?
+    scan_co       = nil,    -- the scan coroutine while it runs
+    scan_label    = "",     -- current scan phase, shown by the progress bar
+    scan_count    = 0,      -- running item count for the current phase
+    progress      = -1.0,   -- 0..1 = determinate fill; <0 = indeterminate bounce
+    -- Contents of the trash/unused folder, for the restore section.
+    trash_contents = {},    -- records { path, name } currently sitting in trash
 }
 
 
@@ -237,24 +260,6 @@ local function listSubdirs(dir)
     return dirs
 end
 
--- Recursively collect every file under 'dir' and its subfolders. Returns a list
--- of records { path = <folder it lives in, ending in SEP>, name = <filename> }.
--- We keep the full source folder per file so the move can find it again even
--- when it's nested several levels deep.
-local function listFilesRecursive(dir)
-    local results = {}
-    for _, f in ipairs(listFiles(dir)) do
-        results[#results + 1] = { path = dir, name = f }
-    end
-    for _, sub in ipairs(listSubdirs(dir)) do
-        local subResults = listFilesRecursive(dir .. sub .. SEP)
-        for _, rec in ipairs(subResults) do
-            results[#results + 1] = rec
-        end
-    end
-    return results
-end
-
 -- Reduce any file path (absolute or relative, either separator) to its bare filename.
 local function basename(path)
     return path:match("[^/\\]+$") or path
@@ -315,95 +320,248 @@ local function collectReferences(rppPath, referenced)
     end
 end
 
--- The core scan. Pure: it reads the disk and returns data, no side effects.
--- Takes a LIST of source folders (absolute paths ending in SEP). Each is scanned
--- recursively. 'manualSet' is a set of lowercased filenames the user has
--- manually excluded in this session; those go to the excluded list too.
--- Returns:
+-- Is this source file used by any scanned project?
+-- Direct hit: its basename is in the referenced set.
+-- Subproject proxy: a file named "<sub>.rpp-PROX" is REAPER's auto-rendered audio
+-- for the subproject "<sub>.rpp". The parent .rpp references only the .rpp (see
+-- collectReferences), so the .rpp-PROX beside it is never in 'referenced' on its
+-- own - but it must ride along whenever its .rpp is referenced. We detect that by
+-- stripping the "-prox" suffix and re-checking. Same for a ".reapeaks" peak file
+-- sitting next to a referenced source.
+local function isReferenced(name, referenced)
+    local lower = name:lower()
+    if referenced[lower] then return true end
+
+    -- "<sub>.rpp-PROX" -> keep if "<sub>.rpp" is referenced.
+    local proxBase = lower:match("^(.*%.rpp)%-prox$")
+    if proxBase and referenced[proxBase] then return true end
+
+    -- "<file>.reapeaks" -> keep if "<file>" is used (peaks follow their audio).
+    -- Recurse so a proxy's peak ("<sub>.rpp-PROX.reapeaks") is caught via the
+    -- proxy rule above.
+    local peakBase = lower:match("^(.-)%.reapeaks$")
+    if peakBase and isReferenced(peakBase, referenced) then return true end
+
+    return false
+end
+
+-- The core scan, as a COROUTINE. Same logic and return values as before, but it
+-- pauses (coroutine.yield) periodically so the caller can repaint a progress bar
+-- between bursts of work instead of freezing on a big project. It updates
+-- state.scan_label / scan_count / progress as it goes.
+--
+-- Takes a LIST of source folders (absolute paths ending in SEP), each scanned
+-- recursively. 'manualSet' is a set of lowercased filenames the user manually
+-- excluded this session; those go to the excluded list too.
+-- Returns (when the coroutine finishes):
 --   unused      - records { path, name } that will be moved
 --   excluded    - records { path, name, reason } held back ("pattern"/"manual")
 --   referenced  - set of referenced basenames (for logging)
 --   audioFiles  - list of every source file found, as records (for logging)
---   rppFiles    - list of .rpp filenames scanned (for logging)
-local function scanForUnused(projectDir, sourceDirs, ignorePatterns, manualSet)
+--   rppFiles    - list of .rpp display names scanned (for logging)
+local function makeScanCoroutine(projectDir, sourceDirs, ignorePatterns, manualSet, trashDir)
     manualSet = manualSet or {}
 
-    -- 1. Find every .rpp in the project folder.
-    local rppFiles = {}
-    for _, f in ipairs(listFiles(projectDir)) do
-        if f:lower():match("%.rpp$") then
-            rppFiles[#rppFiles + 1] = f
-        end
-    end
-    table.sort(rppFiles)
-
-    -- 2. Build the set of filenames those projects reference.
-    local referenced = {}
-    for _, f in ipairs(rppFiles) do
-        collectReferences(projectDir .. f, referenced)
+    -- Windows paths compare case-insensitively; normalise for the trash-skip test.
+    local winOS = r.GetOS():find("Win") ~= nil
+    local function samePath(a, b)
+        if winOS then return a:lower() == b:lower() end
+        return a == b
     end
 
-    -- 3. Recursively list every source folder, gathering records.
-    local audioFiles = {}
-    for _, dir in ipairs(sourceDirs) do
-        for _, rec in ipairs(listFilesRecursive(dir)) do
-            audioFiles[#audioFiles + 1] = rec
-        end
-    end
-    table.sort(audioFiles, function(a, b) return a.name:lower() < b.name:lower() end)
+    return coroutine.create(function()
 
-    -- 4. Among unreferenced files, sort into "will move" vs "excluded".
-    --    A file is excluded if an ignore pattern matches it (reason "pattern")
-    --    or the user manually held it back earlier this session (reason "manual").
-    --    Pattern takes priority in the label when both apply.
-    local unused, excluded = {}, {}
-    for _, rec in ipairs(audioFiles) do
-        if not referenced[rec.name:lower()] then
-            if isIgnored(rec.name, ignorePatterns) then
-                excluded[#excluded + 1] = { path = rec.path, name = rec.name, reason = "pattern" }
-            elseif manualSet[rec.name:lower()] then
-                excluded[#excluded + 1] = { path = rec.path, name = rec.name, reason = "manual" }
-            else
-                unused[#unused + 1] = rec
+        -- Recursively visit every file under 'dir', calling onFile(dir, name)
+        -- for each. Yields after every subdirectory and every 200 files so a deep
+        -- tree can't block the UI. (Replaces the old listFilesRecursive: same walk,
+        -- but able to pause.) Skips the trash folder so files already moved there
+        -- (which now keep their original hierarchy) aren't re-detected as unused.
+        local seen = 0
+        local function walk(dir, onFile)
+            for _, f in ipairs(listFiles(dir)) do
+                onFile(dir, f)
+                seen = seen + 1
+                if seen % 200 == 0 then coroutine.yield() end
+            end
+            for _, sub in ipairs(listSubdirs(dir)) do
+                local subDir = dir .. sub .. SEP
+                if not (trashDir and samePath(subDir, trashDir)) then
+                    walk(subDir, onFile)
+                end
+                coroutine.yield()
             end
         end
-    end
 
-    return unused, excluded, referenced, audioFiles, rppFiles
+        -- 1. Find every .rpp anywhere under the project folder (recursively), so
+        --    nested subprojects (e.g. Subprojects/Wind/*.rpp) also count as
+        --    sessions whose referenced media must be kept. We match ONLY names
+        --    ending in .rpp, so rendered proxies (.rpp-PROX) aren't parsed.
+        --    Indeterminate progress: we don't know the tree size up front.
+        state.scan_label = "Finding project files (.rpp)..."
+        state.progress   = -1.0
+        state.scan_count = 0
+        local rppRecords = {}
+        walk(projectDir, function(dir, name)
+            if name:lower():match("%.rpp$") then
+                rppRecords[#rppRecords + 1] = { path = dir, name = name }
+                state.scan_count = #rppRecords
+            end
+        end)
+        table.sort(rppRecords, function(a, b)
+            return (a.path .. a.name):lower() < (b.path .. b.name):lower()
+        end)
+
+        -- Display names for logging: relative to the project dir where possible,
+        -- so a nested subproject shows as "Subprojects\Wind\...rpp" not an
+        -- absolute path.
+        local rppFiles = {}
+        for _, rec in ipairs(rppRecords) do
+            local full = rec.path .. rec.name
+            if full:sub(1, #projectDir) == projectDir then
+                rppFiles[#rppFiles + 1] = full:sub(#projectDir + 1)
+            else
+                rppFiles[#rppFiles + 1] = full
+            end
+        end
+
+        -- 2. Build the set of filenames those projects reference. Determinate now
+        --    that we know the .rpp count.
+        state.scan_label = "Reading project references..."
+        state.scan_count = 0
+        local referenced = {}
+        for i, rec in ipairs(rppRecords) do
+            collectReferences(rec.path .. rec.name, referenced)
+            state.scan_count = i
+            state.progress   = (#rppRecords > 0) and (i / #rppRecords) or 1.0
+            coroutine.yield()
+        end
+
+        -- 3. Recursively list every source folder, gathering records.
+        --    Indeterminate again.
+        state.scan_label = "Listing source files..."
+        state.progress   = -1.0
+        state.scan_count = 0
+        local audioFiles = {}
+        for _, dir in ipairs(sourceDirs) do
+            walk(dir, function(fdir, name)
+                audioFiles[#audioFiles + 1] = { path = fdir, name = name }
+                state.scan_count = #audioFiles
+            end)
+        end
+        table.sort(audioFiles, function(a, b) return a.name:lower() < b.name:lower() end)
+
+        -- 4. Among unreferenced files, sort into "will move" vs "excluded".
+        --    A file is excluded if an ignore pattern matches it (reason "pattern")
+        --    or the user manually held it back earlier this session (reason
+        --    "manual"). Pattern takes priority in the label when both apply.
+        state.scan_label = "Checking for unused files..."
+        state.scan_count = 0
+        local unused, excluded = {}, {}
+        for i, rec in ipairs(audioFiles) do
+            if not isReferenced(rec.name, referenced) then
+                if isIgnored(rec.name, ignorePatterns) then
+                    excluded[#excluded + 1] = { path = rec.path, name = rec.name, reason = "pattern" }
+                elseif manualSet[rec.name:lower()] then
+                    excluded[#excluded + 1] = { path = rec.path, name = rec.name, reason = "manual" }
+                else
+                    unused[#unused + 1] = rec
+                end
+            end
+            state.scan_count = i
+            state.progress   = (#audioFiles > 0) and (i / #audioFiles) or 1.0
+            if i % 200 == 0 then coroutine.yield() end
+        end
+
+        return unused, excluded, referenced, audioFiles, rppFiles
+    end)
 end
 
--- Move one file into the trash folder, renaming to avoid clobbering.
-local function moveToTrash(sourcePath, filename, trashDir)
-    if not r.file_exists(sourcePath) then return false end
+-- Return 'path' (a folder ending in SEP) relative to 'base' (also ending in SEP),
+-- i.e. the part below base. Returns "" when path IS base, or when path isn't
+-- under base at all (caller then falls back to base with no subfolder).
+local function relativeUnder(path, base)
+    if base and #base > 0 and path:sub(1, #base) == base then
+        return path:sub(#base + 1)
+    end
+    return ""
+end
 
-    local target = trashDir .. filename
+-- Move one file into destDir, creating destDir if needed and renaming to avoid
+-- clobbering an existing file there. Returns the final target path on success,
+-- or nil if the source was missing or the rename failed.
+local function moveFile(sourcePath, destDir, filename)
+    if not r.file_exists(sourcePath) then return nil end
+
+    r.RecursiveCreateDirectory(destDir, 0)   -- harmless if it already exists
+
+    local target = destDir .. filename
     local counter = 1
     while r.file_exists(target) do
         local stem, ext = filename:match("(.+)%.(%w+)$")
         if stem then
-            target = trashDir .. stem .. "_" .. counter .. "." .. ext
+            target = destDir .. stem .. "_" .. counter .. "." .. ext
         else
-            target = trashDir .. filename .. "_" .. counter
+            target = destDir .. filename .. "_" .. counter
         end
         counter = counter + 1
     end
 
-    return os.rename(sourcePath, target) ~= nil
+    if os.rename(sourcePath, target) then return target end
+    return nil
 end
 
--- Move the audio file plus its peak file (if present, best-effort).
--- 'rec' is a { path, name } record: path is the folder the file actually lives
--- in (which, with recursion + multiple folders, varies per file).
-local function cleanFile(rec, trashDir)
-    local moved = moveToTrash(rec.path .. rec.name, rec.name, trashDir)
+-- Move the audio file (plus its peak file, best-effort) into the trash,
+-- PRESERVING its folder position relative to the project. E.g.
+--   <proj>\Audio Files\Wind\x.wav  ->  <trash>\Audio Files\Wind\x.wav
+-- Keeping the hierarchy means two files with the same name in different folders
+-- no longer collide in the trash, and each file can be restored to exactly
+-- where it came from.
+-- 'rec' is a { path, name } record: path is the folder the file lives in.
+local function cleanFile(rec, trashDir, projectDir)
+    local destDir = trashDir .. relativeUnder(rec.path, projectDir)
+    local moved   = moveFile(rec.path .. rec.name, destDir, rec.name) ~= nil
 
     -- .reapeaks usually sits next to the audio; some setups use a 'peaks' subfolder.
     local peakName = rec.name .. ".reapeaks"
-    if not moveToTrash(rec.path .. peakName, peakName, trashDir) then
-        moveToTrash(rec.path .. "peaks" .. SEP .. peakName, peakName, trashDir)
+    if not moveFile(rec.path .. peakName, destDir, peakName) then
+        moveFile(rec.path .. "peaks" .. SEP .. peakName, destDir, peakName)
     end
 
     return moved
+end
+
+-- Restore a file from the trash back to its original location. Because cleanFile
+-- preserved the hierarchy under the trash folder, the file's path relative to the
+-- trash folder IS its path relative to the project - so we just mirror it back.
+-- Moves the peak file alongside too (best-effort).
+local function restoreFile(rec, trashDir, projectDir)
+    local destDir = projectDir .. relativeUnder(rec.path, trashDir)
+    local moved   = moveFile(rec.path .. rec.name, destDir, rec.name) ~= nil
+
+    local peakName = rec.name .. ".reapeaks"
+    moveFile(rec.path .. peakName, destDir, peakName)
+
+    return moved
+end
+
+-- List every file under 'dir' and its subfolders as { path, name } records.
+-- Synchronous (used only for the trash folder, which is small); .reapeaks peak
+-- files are skipped so the restore list shows only the media the user recognises
+-- (peaks ride along with their audio during restore).
+local function listTreeRecords(dir)
+    local out = {}
+    local function walk(d)
+        for _, f in ipairs(listFiles(d)) do
+            if not f:lower():match("%.reapeaks$") then
+                out[#out + 1] = { path = d, name = f }
+            end
+        end
+        for _, sub in ipairs(listSubdirs(d)) do
+            walk(d .. sub .. SEP)
+        end
+    end
+    walk(dir)
+    return out
 end
 
 -- Open a folder in the OS file browser (best-effort; needs the SWS extension's
@@ -422,7 +580,39 @@ local ctx = ImGui.CreateContext(SCRIPT_NAME or "Clean Source Directory")
 ----------- ACTIONS -------------
 ---------------------------------
 
-local function runScan()
+-- The folder of the currently open project, or nil if it hasn't been saved.
+local function resolveProjectDir()
+    local _, projPath = r.EnumProjects(-1, "")
+    if not projPath or projPath == "" then return nil end
+    return projPath:match("^(.*[\\/])")
+end
+
+-- Rebuild state.trash_contents from whatever is currently in the trash folder,
+-- resolving the trash path from the CURRENT project + trash-subfolder field so
+-- the restore list stays correct even before the first scan or after the field
+-- is edited. Cheap enough to call synchronously (the trash folder is small).
+local function refreshTrashContents()
+    state.trash_contents = {}
+
+    local projectDir = resolveProjectDir()
+    if not projectDir then return end
+    state.project_dir = state.project_dir or projectDir
+
+    local trashDir = joinSubfolder(projectDir, cleanSubfolder(state.trash_subfolder))
+    state.trash_dir = trashDir
+    if not dirExists(trashDir) then return end
+
+    local recs = listTreeRecords(trashDir)
+    table.sort(recs, function(a, b) return a.name:lower() < b.name:lower() end)
+    state.trash_contents = recs
+end
+
+-- Start a scan: resolve the folders, then hand the heavy disk work to a
+-- coroutine that advanceScan() drives across frames. Returns immediately so the
+-- window keeps painting (and shows a progress bar) while the scan runs.
+local function beginScan()
+    if state.scanning then return end   -- already running; ignore repeat clicks
+
     local _, projPath = r.EnumProjects(-1, "")
     if not projPath or projPath == "" then
         state.status = "Save the project first - the scan needs a project folder."
@@ -446,9 +636,27 @@ local function runScan()
 
     state.trash_dir = joinSubfolder(state.project_dir, cleanSubfolder(state.trash_subfolder))
 
-    local patterns = parseIgnorePatterns(state.ignore_text)
-    local unused, excluded, referenced, audioFiles, rppFiles =
-        scanForUnused(state.project_dir, state.source_dirs, patterns, state.manual_excluded)
+    -- Stash the inputs the finishing report needs, then kick off the coroutine.
+    state.scan_projPath = projPath
+    state.scan_patterns = parseIgnorePatterns(state.ignore_text)
+    state.scan_co  = makeScanCoroutine(state.project_dir, state.source_dirs,
+                                       state.scan_patterns, state.manual_excluded,
+                                       state.trash_dir)
+    state.scanning   = true
+    state.scanned    = false   -- hide any previous results while the new scan runs
+    state.confirming = false
+    state.scan_label = "Starting scan..."
+    state.scan_count = 0
+    state.progress   = -1.0
+    state.status     = "Scanning..."
+end
+
+-- Called when the scan coroutine finishes. Prints the diagnostic report (if
+-- logging) and commits the results into state. Same body as the old synchronous
+-- tail of runScan; the locals now arrive as arguments.
+local function finishScan(unused, excluded, referenced, audioFiles, rppFiles)
+    local projPath = state.scan_projPath
+    local patterns = state.scan_patterns
 
     ------------------------------------------------------------------
     -- Diagnostic report
@@ -458,13 +666,13 @@ local function runScan()
         log("=== JROPE Clean Source: scan report ===\n")
         log("(lists capped at %d items - the counts in parentheses are the true totals)\n\n", LOG_MAX_LIST)
 
-        log("Project file : %s\n", projPath)
+        log("Project file : %s\n", tostring(projPath))
         log("Project dir  : %s\n", tostring(state.project_dir))
         log("Source dirs  (%d):\n", #state.source_dirs)
         for _, d in ipairs(state.source_dirs) do log("    %s\n", d) end
         log("Trash dir    : %s\n\n", tostring(state.trash_dir))
 
-        log(".rpp files found in project dir (%d):\n", #rppFiles)
+        log(".rpp files found under project dir, incl. subprojects (%d):\n", #rppFiles)
         logList(rppFiles)
         log("\n")
 
@@ -482,7 +690,7 @@ local function runScan()
                 log("    ... and %d more (capped)\n", #audioFiles - LOG_MAX_LIST)
                 break
             end
-            local ref = referenced[rec.name:lower()] and "yes" or "no "
+            local ref = isReferenced(rec.name, referenced) and "yes" or "no "
             local ign = isIgnored(rec.name, patterns) and "yes" or "no "
             local verdict
             if ign == "yes" then
@@ -517,6 +725,34 @@ local function runScan()
         :format(#rppFiles, #audioFiles, #unused, #excluded)
 end
 
+-- Drive the scan coroutine for up to SCAN_FRAME_BUDGET_MS this frame. Resumes it
+-- repeatedly until the budget is spent (still work to do) or it finishes.
+-- Call once per frame from the GUI loop while state.scanning is true.
+local function advanceScan()
+    local deadline = r.time_precise() + SCAN_FRAME_BUDGET_MS / 1000.0
+    repeat
+        local ok, a, b, c, d, e = coroutine.resume(state.scan_co)
+
+        if not ok then
+            -- Coroutine hit a Lua error. Abandon the scan and surface it.
+            state.scanning = false
+            state.scan_co  = nil
+            state.status   = "Scan error: " .. tostring(a)
+            log("[scan] coroutine error: %s\n", tostring(a))
+            return
+        end
+
+        if coroutine.status(state.scan_co) == "dead" then
+            -- a..e are the coroutine's return values (the scan results).
+            state.scanning = false
+            state.scan_co  = nil
+            state.progress = 1.0
+            finishScan(a, b, c, d, e)
+            return
+        end
+    until r.time_precise() >= deadline
+end
+
 local function runMove()
     -- Re-resolve the trash folder from the CURRENT field value. It would
     -- otherwise be frozen at scan time, so editing the trash name after a scan
@@ -544,7 +780,7 @@ local function runMove()
 
     local movedCount, failCount = 0, 0
     for _, rec in ipairs(state.results) do
-        if cleanFile(rec, state.trash_dir) then
+        if cleanFile(rec, state.trash_dir, state.project_dir) then
             movedCount = movedCount + 1
             log("[move] %s  (from %s)\n", rec.name, rec.path)
         else
@@ -561,6 +797,9 @@ local function runMove()
     state.status = ("Moved %d file(s) to '%s'.%s")
         :format(movedCount, cleanSubfolder(state.trash_subfolder), failCount > 0 and (" "..failCount.." could not be moved.") or "")
     log("[move] Done. %d moved, %d failed.\n", movedCount, failCount)
+
+    -- Refresh the restore list so the just-moved files appear in it.
+    refreshTrashContents()
 
     -- Open the trash folder so the user can see what was moved.
     if movedCount > 0 then
@@ -618,6 +857,78 @@ local function drawFileList(id, records, btnLabel, showReason)
 end
 
 
+-- Draw the trash/unused-folder list: each row has a "Restore" button and shows
+-- the file's folder relative to the trash dir (so the preserved hierarchy is
+-- visible). Returns the index whose Restore button was clicked this frame, or nil.
+local function drawTrashList(id, records)
+    local clickedIndex = nil
+    local list_h = ImGui.GetTextLineHeightWithSpacing(ctx) * 8
+    if ImGui.BeginChild(ctx, id, 0, list_h) then
+        for i, rec in ipairs(records) do
+            ImGui.PushID(ctx, i)
+            if ImGui.SmallButton(ctx, "Restore") then
+                clickedIndex = i
+            end
+            ImGui.SameLine(ctx)
+            ImGui.Text(ctx, rec.name)
+            -- Show the sub-path within the trash folder (== its original location
+            -- relative to the project), so the user sees where it will go back to.
+            local rel = rec.path
+            if state.trash_dir and rec.path:sub(1, #state.trash_dir) == state.trash_dir then
+                rel = rec.path:sub(#state.trash_dir + 1)
+            end
+            if rel ~= "" then
+                ImGui.SameLine(ctx)
+                ImGui.TextColored(ctx, 0x808080FF, "  [" .. rel .. "]")
+            end
+            ImGui.PopID(ctx)
+        end
+        ImGui.EndChild(ctx)
+    end
+    return clickedIndex
+end
+
+
+-- Draw a progress bar spanning the window width, using the DrawList API.
+-- 'frac' >= 0 draws a solid fill of that fraction (0..1). 'frac' < 0 draws an
+-- indeterminate "bounce" chip that slides back and forth, for phases whose total
+-- isn't known up front (the recursive directory walks). We draw manually rather
+-- than use ImGui.ProgressBar because that widget mishandles a negative fraction.
+local function drawProgressBar(frac)
+    local BAR_H   = 18
+    local COL_BG   = 0x333333FF
+    local COL_FILL = 0x4DA6FFFF
+    local COL_BORD = 0x888888FF
+
+    local dl       = ImGui.GetWindowDrawList(ctx)
+    local x0, y0   = ImGui.GetCursorScreenPos(ctx)
+    local avail_w  = ImGui.GetContentRegionAvail(ctx)
+    local x1, y1   = x0 + avail_w, y0 + BAR_H
+
+    ImGui.DrawList_AddRectFilled(dl, x0, y0, x1, y1, COL_BG)
+
+    if frac >= 0 then
+        -- Determinate: solid fill from the left.
+        local fx = x0 + avail_w * math.max(0.0, math.min(1.0, frac))
+        if fx > x0 then
+            ImGui.DrawList_AddRectFilled(dl, x0, y0, fx, y1, COL_FILL)
+        end
+    else
+        -- Indeterminate: a chip ~30% wide bouncing left<->right off wall-clock
+        -- time, so it animates at a constant speed regardless of frame rate.
+        local t     = ImGui.GetTime(ctx)
+        local chipW = avail_w * 0.30
+        local span  = avail_w - chipW
+        local tri   = math.abs((((t * 0.6) % 2) - 1))   -- 0->1->0 triangle wave
+        local cx0   = x0 + span * tri
+        ImGui.DrawList_AddRectFilled(dl, cx0, y0, cx0 + chipW, y1, COL_FILL)
+    end
+
+    ImGui.DrawList_AddRect(dl, x0, y0, x1, y1, COL_BORD)
+    ImGui.Dummy(ctx, avail_w, BAR_H)   -- advance layout cursor past the bar
+end
+
+
 local function drawWindow()
     ImGui.SetNextWindowSize(ctx, 460, 600, ImGui.Cond_FirstUseEver)
 
@@ -637,10 +948,11 @@ local function drawWindow()
             ImGui.BulletText(ctx, "It scans every .rpp in the project folder, not just the open one.")
             ImGui.BulletText(ctx, "Ignore patterns protect files you don't want touched.")
             ImGui.BulletText(ctx, "Review the results and add/remove files before moving.")
+            ImGui.BulletText(ctx, "Moved files keep their folder structure and can be restored below.")
             ImGui.Spacing(ctx)
             ImGui.TextWrapped(ctx,
                 "WARNING: Samples referenced by plugins cannot be detected! " ..
-                "Be sure to validate any samplers you want to retain.")
+                "Be sure to relaunch and review samplers before deleting source.")
             ImGui.Spacing(ctx)
             ImGui.Spacing(ctx)
         end
@@ -689,15 +1001,37 @@ local function drawWindow()
         if trv then saveSettings() end
 
         ImGui.Spacing(ctx)
+        -- Disable the scan button (and the logging checkbox) while a scan runs so
+        -- the user can't start a second one on top of the coroutine in flight.
+        -- Latch the flag ONCE for this frame: the button's own click flips
+        -- state.scanning mid-frame, so gating Begin/EndDisabled on the live value
+        -- would leave them unbalanced (EndDisabled without a matching Begin).
+        local disabled = state.scanning
+        if disabled then ImGui.BeginDisabled(ctx) end
         if ImGui.Button(ctx, "Scan for unused files") then
-            runScan()
+            beginScan()
         end
         ImGui.SameLine(ctx)
         local lrv; lrv, state.logging = ImGui.Checkbox(ctx, "Log to console", state.logging)
         if lrv then saveSettings() end
+        if disabled then ImGui.EndDisabled(ctx) end
+
+        --==== Scan progress ====--
+        if state.scanning then
+            ImGui.Spacing(ctx)
+            ImGui.Text(ctx, state.scan_label ~= "" and state.scan_label or "Scanning...")
+            drawProgressBar(state.progress)
+            -- A live count under the bar: percentage for determinate phases,
+            -- a running tally for the indeterminate directory walks.
+            if state.progress >= 0 then
+                ImGui.Text(ctx, ("%d%%  (%d items)"):format(math.floor(state.progress * 100), state.scan_count))
+            else
+                ImGui.Text(ctx, ("%d found so far..."):format(state.scan_count))
+            end
+        end
 
         --==== Results ====--
-        if state.scanned then
+        if state.scanned and not state.scanning then
             ImGui.Spacing(ctx)
             ImGui.SeparatorText(ctx, ("To move (%d)"):format(#state.results))
 
@@ -773,6 +1107,46 @@ local function drawWindow()
             end
         end
 
+        --==== Unused folder (restore) ====--
+        -- Shows what's currently sitting in the trash folder, with buttons to put
+        -- files back where they came from. Hidden mid-scan to keep the UI calm.
+        if not state.scanning then
+            ImGui.Spacing(ctx)
+            ImGui.SeparatorText(ctx, ("In unused folder (%d)"):format(#state.trash_contents))
+
+            if ImGui.SmallButton(ctx, "Refresh") then
+                refreshTrashContents()
+            end
+
+            if #state.trash_contents == 0 then
+                ImGui.SameLine(ctx)
+                ImGui.Text(ctx, "Empty (nothing to restore).")
+            else
+                ImGui.SameLine(ctx)
+                if ImGui.SmallButton(ctx, "Restore all") then
+                    local n = #state.trash_contents
+                    for _, rec in ipairs(state.trash_contents) do
+                        restoreFile(rec, state.trash_dir, state.project_dir)
+                    end
+                    refreshTrashContents()
+                    state.status = ("Restored %d file(s) from the unused folder."):format(n)
+                end
+
+                ImGui.TextWrapped(ctx,
+                    "Files moved here are shown with their original folder in grey. " ..
+                    "Click Restore to put one back in place.")
+                ImGui.Spacing(ctx)
+
+                local restoreIndex = drawTrashList("##trash", state.trash_contents)
+                if restoreIndex then
+                    local rec = state.trash_contents[restoreIndex]
+                    restoreFile(rec, state.trash_dir, state.project_dir)
+                    refreshTrashContents()
+                    state.status = ("Restored '%s'."):format(rec.name)
+                end
+            end
+        end
+
         --==== Status line ====--
         if state.status ~= "" then
             ImGui.Spacing(ctx)
@@ -788,6 +1162,12 @@ end
 
 
 function main()
+    -- Advance the scan a slice at a time BEFORE drawing, so the window paints the
+    -- updated progress/results this frame. advanceScan() clears state.scanning
+    -- (and calls finishScan) once the coroutine completes.
+    if state.scanning then
+        advanceScan()
+    end
     if drawWindow() then
         r.defer(main)
     end
@@ -798,5 +1178,6 @@ end
 -------------- MAIN -------------
 ---------------------------------
 
-loadSettings()   -- restore the user's saved patterns/folders before drawing
+loadSettings()          -- restore the user's saved patterns/folders before drawing
+refreshTrashContents()  -- populate the restore list from any existing trash folder
 main()
