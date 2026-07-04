@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="f1d9f01ddd27f604f92e8a36a35d708a83c5f827">
+<index version="1" name="JRope Scripts" commit="ec80a40d1eee56b4108f4da0274f0611a52b7c5b">
   <category name="Functions">
     <reapack name="jrope__Common Functions.lua" type="script" desc="Jrope Common Functions">
       <metadata>
@@ -419,6 +419,9 @@ v.1.1 JRope Modification
       </metadata>
       <version name="2.4" author="Jesse Rope" time="2026-06-02T01:25:30Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/66af7f26b04f32e9898561a471fc9bfe4beb62b2/Various/jrope_Clean%20Multiple%20Sessions'%20Source%20Directories.lua</source>
+      </version>
+      <version name="2.8" author="Jesse Rope" time="2026-07-04T17:32:34Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/ec80a40d1eee56b4108f4da0274f0611a52b7c5b/Various/jrope_Clean%20Multiple%20Sessions'%20Source%20Directories.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_Contextual mute.lua" type="script" desc="Contextual Mute">
