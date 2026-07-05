@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="ec80a40d1eee56b4108f4da0274f0611a52b7c5b">
+<index version="1" name="JRope Scripts" commit="b9c962fb1658f9039dfe22a6164f65c1d20e355b">
   <category name="Functions">
     <reapack name="jrope__Common Functions.lua" type="script" desc="Jrope Common Functions">
       <metadata>
@@ -334,6 +334,14 @@ v.1.1 JRope Modification
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/3d4a48f60b92fec8f7c2e739510d5900360606e5/Markers%20and%20Regions/jrope_Rename%20selected%20Markers%20and%20Regions%20from%20clipboard.lua</source>
       </version>
     </reapack>
+    <reapack name="jrope_Rip and Gather Markers and Regions GUI.lua" type="script" desc="Rip and Gather Markers and Regions GUI">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="0.5" author="Jesse Rope" time="2026-07-05T04:57:26Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/b9c962fb1658f9039dfe22a6164f65c1d20e355b/Markers%20and%20Regions/jrope_Rip%20and%20Gather%20Markers%20and%20Regions%20GUI.lua</source>
+      </version>
+    </reapack>
   </category>
   <category name="Media Explorer">
     <reapack name="jrope_Add and Manage Media Explorer User Columns.lua" type="script" desc="Media Explorer Metadata Column Manager">
@@ -342,6 +350,14 @@ v.1.1 JRope Modification
       </metadata>
       <version name="1.0" author="Jesse Rope" time="2026-07-03T05:54:53Z">
         <source main="mediaexplorer">https://github.com/beacomedian/JRope-Scripts/raw/77bc8d1f3f7a06188336a35cea9e42872e4238a8/Media%20Explorer/jrope_Add%20and%20Manage%20Media%20Explorer%20User%20Columns.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Re-read Metadata for Media Explorer Databases.lua" type="script" desc="Re-read Metadata for Media Explorer Databases">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="0.5" author="Jesse Rope" time="2026-07-05T04:57:26Z">
+        <source main="mediaexplorer">https://github.com/beacomedian/JRope-Scripts/raw/b9c962fb1658f9039dfe22a6164f65c1d20e355b/Media%20Explorer/jrope_Re-read%20Metadata%20for%20Media%20Explorer%20Databases.lua</source>
       </version>
     </reapack>
   </category>
