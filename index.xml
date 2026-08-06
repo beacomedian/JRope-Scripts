@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="JRope Scripts" commit="b9c962fb1658f9039dfe22a6164f65c1d20e355b">
+<index version="1" name="JRope Scripts" commit="5843ce2175c1deb65724e66884bd7dde6c6011b8">
   <category name="Functions">
     <reapack name="jrope__Common Functions.lua" type="script" desc="Jrope Common Functions">
       <metadata>
@@ -115,6 +115,14 @@ v.1.1 JRope Modification
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e685a56a6932bfef4c1888727ebe6c1b9a3c86f1/Items/jrope_Align%20Selected%20Items%20Across%20Tracks%20Maintaining%20Relative%20Position.lua</source>
       </version>
     </reapack>
+    <reapack name="jrope_Batch Phase Alignment.lua" type="script" desc="Batch Phase Alignment">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="0.1" author="Jesse Rope" time="2026-08-06T23:34:46Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e703d40f37f86365389b763d40b0e8efd6d1ba41/Items/jrope_Batch%20Phase%20Alignment.lua</source>
+      </version>
+    </reapack>
     <reapack name="jrope_Crop Selected Items to First Transient, Trailing Volume Threshold, add Fades.lua" type="script" desc="Trim and fade selected items (transient + threshold)">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
@@ -128,6 +136,14 @@ v.1.1 JRope Modification
       </metadata>
       <version name="1.0" author="Jesse Rope" time="2026-05-22T00:34:28Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e685a56a6932bfef4c1888727ebe6c1b9a3c86f1/Items/jrope_Crop%20Selected%20Items%20to%20First%20Transient,%20Trailing%20Volume%20Threshold,%20add%20Fades.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Detect and Remove Duplicate Items.lua" type="script" desc="Detect and Remove Duplicate Items">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="0.1" author="Jesse Rope" time="2026-08-06T23:34:46Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e703d40f37f86365389b763d40b0e8efd6d1ba41/Items/jrope_Detect%20and%20Remove%20Duplicate%20Items.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_Group Adjacent Selected Items.lua" type="script" desc="Group Adjacent Selected Items">
@@ -213,6 +229,14 @@ v.1.1 JRope Modification
       </metadata>
       <version name="1.1" author="Jesse Rope" time="2026-05-23T00:06:50Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/3d4a48f60b92fec8f7c2e739510d5900360606e5/Items/jrope_Replace%20Missing%20Source%20Wav%20with%20Flac%20-%20Search.lua</source>
+      </version>
+    </reapack>
+    <reapack name="jrope_Reset Item Phase Alignment.lua" type="script" desc="Reset Item Phase Alignment">
+      <metadata>
+        <link rel="website">https://www.jesserope.com</link>
+      </metadata>
+      <version name="1.0" author="Jesse Rope" time="2026-08-06T23:34:46Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/e703d40f37f86365389b763d40b0e8efd6d1ba41/Items/jrope_Reset%20Item%20Phase%20Alignment.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_Select first N items from currently selected items.lua" type="script" desc="Select First N Items Per Track">
@@ -332,6 +356,9 @@ v.1.1 JRope Modification
       </metadata>
       <version name="1.1" author="Jesse Rope" time="2026-05-23T00:06:50Z">
         <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/3d4a48f60b92fec8f7c2e739510d5900360606e5/Markers%20and%20Regions/jrope_Rename%20selected%20Markers%20and%20Regions%20from%20clipboard.lua</source>
+      </version>
+      <version name="1.2" author="Jesse Rope" time="2026-08-06T23:35:04Z">
+        <source main="main">https://github.com/beacomedian/JRope-Scripts/raw/5843ce2175c1deb65724e66884bd7dde6c6011b8/Markers%20and%20Regions/jrope_Rename%20selected%20Markers%20and%20Regions%20from%20clipboard.lua</source>
       </version>
     </reapack>
     <reapack name="jrope_Rip and Gather Markers and Regions GUI.lua" type="script" desc="Rip and Gather Markers and Regions GUI">
