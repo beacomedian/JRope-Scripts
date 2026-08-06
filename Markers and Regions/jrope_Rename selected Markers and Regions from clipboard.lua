@@ -4,22 +4,30 @@
  * Repository: github.com/beacomedian/JRope-Scripts
  * Licence: GPL v3
  * REAPER: 7.4
- * Version: 1.1
+ * Version: 1.2
  * Provides:
-  [main] . > 
+  [main] . >
  * Link: https://www.jesserope.com
  * noindex
  * About:
   # Combined Acenden and Cfillion scripts
  * Changelog:
+  # v1.2 - Added "Copy to clipboard" button so names can be exported, edited, then pasted back
   # v1.1 - Replaced USER CONFIG section with ImGui settings window
   # v1.0 - Initial Release
  * To Do:
-  # 
+  #
 
 
 ]]
 
+
+
+---------------------------------
+---------- USER CONFIG ----------
+---------------------------------
+
+ENABLE_DEBUG_LOG = false  -- set to true to print debug output to the REAPER console
 
 
 ---------------------------------
@@ -76,6 +84,70 @@ end
 
 
 -- -------------------------------------------------------
+-- Resolve the time selection bounds, if that option is on.
+-- Returns start, end, ok — ok is false (and a message box is shown)
+-- when the option is enabled but there is no time selection.
+-- -------------------------------------------------------
+local function get_time_selection(settings)
+
+  if not settings.only_in_time_selection then return 0, 0, true end
+
+  local time_sel_start, time_sel_end = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
+
+  if time_sel_end <= time_sel_start then
+    reaper.ShowMessageBox("No time selection found!", "Error", 0)
+    return 0, 0, false
+  end
+
+  Log("Time selection:", time_sel_start, "to", time_sel_end)
+  return time_sel_start, time_sel_end, true
+end
+
+
+-- -------------------------------------------------------
+-- Copy the names of the matching markers/regions to the
+-- clipboard, one per line, in project (timeline) order.
+-- Runs when the user clicks "Copy names to clipboard".
+-- Returns a short status string for the GUI.
+-- -------------------------------------------------------
+local function run_copy(settings)
+
+  local retval, num_markers, num_regions = reaper.CountProjectMarkers(0)
+  Log("Copy: found", num_markers, "markers and", num_regions, "regions")
+
+  if retval < 1 then
+    reaper.ShowMessageBox("No markers or regions found in the project.", "Nothing to do", 0)
+    return "Nothing to copy."
+  end
+
+  local time_sel_start, time_sel_end, ok = get_time_selection(settings)
+  if not ok then return "No time selection." end
+
+  -- Collect the names of everything that passes the filter
+  local names = {}
+
+  for i = 0, retval - 1 do
+    local retval2, isrgn, pos, rgnend, name, markrgnindexnumber = reaper.EnumProjectMarkers(i)
+
+    if should_process(isrgn, pos, settings, time_sel_start, time_sel_end) then
+      names[#names + 1] = name
+      Log("Copy: including", isrgn and "region" or "marker", markrgnindexnumber, "->", name)
+    end
+  end
+
+  if #names < 1 then
+    reaper.ShowMessageBox("No markers or regions matched the current settings.", "Nothing to do", 0)
+    return "Nothing matched."
+  end
+
+  reaper.CF_SetClipboard(table.concat(names, "\n"))
+  Log("Copy: wrote", #names, "names to the clipboard")
+
+  return ("Copied %d name%s to the clipboard."):format(#names, #names == 1 and "" or "s")
+end
+
+
+-- -------------------------------------------------------
 -- Core rename logic — runs after the user clicks "Run"
 -- -------------------------------------------------------
 local function run_rename(settings)
@@ -96,17 +168,8 @@ local function run_rename(settings)
   end
 
   -- Handle time selection requirement
-  local time_sel_start, time_sel_end = 0, 0
-
-  if settings.only_in_time_selection then
-    time_sel_start, time_sel_end = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
-    local has_time_selection = (time_sel_end > time_sel_start)
-
-    if not has_time_selection then
-      reaper.ShowMessageBox("No time selection found!", "Error", 0)
-      return
-    end
-  end
+  local time_sel_start, time_sel_end, ok = get_time_selection(settings)
+  if not ok then return end
 
   -- Begin undo block here, just before making changes
   --reaper.Undo_BeginBlock()
@@ -130,6 +193,8 @@ local function run_rename(settings)
         else
           reaper.SetProjectMarker(markrgnindexnumber, false, pos, 0, line)
         end
+
+        Log("Rename:", isrgn and "region" or "marker", markrgnindexnumber, "->", line)
 
         index = i + 1
         found = true
@@ -163,11 +228,14 @@ local window_open = true
 -- Tracks whether the user clicked Run (so we execute after the GUI closes)
 local should_run = false
 
+-- Last action feedback, shown at the bottom of the window
+local status_message = ""
+
 
 local function draw_gui()
 
   -- Set a fixed window size so it doesn't collapse weirdly
-  reaper.ImGui_SetNextWindowSize(ctx, 300, 200, reaper.ImGui_Cond_FirstUseEver())
+  reaper.ImGui_SetNextWindowSize(ctx, 340, 250, reaper.ImGui_Cond_FirstUseEver())
 
   -- Begin the window; rv is false if the window is collapsed
   local rv, open = reaper.ImGui_Begin(ctx, "Rename from Clipboard - Settings", true)
@@ -210,6 +278,14 @@ local function draw_gui()
     reaper.ImGui_Spacing(ctx)
 
     -- ---- Buttons ----
+    -- Copy runs immediately and leaves the window open, so the user can
+    -- copy, edit the list in a text editor, then come back and hit Run.
+    if reaper.ImGui_Button(ctx, "Copy names to clipboard") then
+      status_message = run_copy(settings)
+    end
+
+    reaper.ImGui_Spacing(ctx)
+
     if reaper.ImGui_Button(ctx, "Run") then
       should_run   = true
       window_open  = false  -- close the GUI after clicking Run
@@ -219,6 +295,12 @@ local function draw_gui()
 
     if reaper.ImGui_Button(ctx, "Cancel") then
       window_open = false
+    end
+
+    -- ---- Status line ----
+    if status_message ~= "" then
+      reaper.ImGui_Spacing(ctx)
+      reaper.ImGui_Text(ctx, status_message)
     end
 
   end -- if rv
