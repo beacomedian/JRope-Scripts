@@ -1,11 +1,24 @@
 -- @description Rearrange Selected Item Position Based on Color and Mute State
 -- @author Stephen Schappler (Modified by JRope)
--- @version 1.1
+-- @version 1.2
 -- @about
 --   Original script by Stephen Schappler 'Rearrange Selected Item Position Based on Color'
+--   Order: colored unmuted -> uncolored unmuted -> colored muted -> uncolored muted
 -- @changelog 
 --   8/30/24 v1.0 - Creating the script
 --   4/17/25 v1.1 - Modified to handle items on separate tracks independently, and move muted items to the end
+--   9/9/26  v1.2 - Fixed colored items landing behind default-colored items: I_CUSTOMCOLOR is now
+--                  tested against REAPER's 0x1000000 "custom color set" flag instead of ~= 0, and
+--                  color groups are ordered deterministically by their earliest item position
+
+-- True only when the item actually has a custom color assigned.
+-- REAPER ORs 0x1000000 into I_CUSTOMCOLOR when a custom color is set; the raw
+-- value can be non-zero without that flag (e.g. a color that was later cleared),
+-- which made default-colored items sort as if they were colored.
+local function HasCustomColor(item)
+    local color = reaper.GetMediaItemInfo_Value(item, "I_CUSTOMCOLOR")
+    return (math.floor(color) & 0x1000000) ~= 0, math.floor(color)
+end
 
 function main()
     local item_count = reaper.CountSelectedMediaItems(0)
@@ -35,6 +48,35 @@ function main()
     reaper.UpdateArrange()
 end
 
+-- Appends every item of a color-keyed group table to sorted_items.
+-- Color groups run in order of their earliest item, and items inside a group
+-- run in their original position order, so the result is stable run to run.
+local function append_color_groups(color_groups, sorted_items)
+    local ordered_colors = {}
+    for color, group in pairs(color_groups) do
+        table.sort(group, function(a, b) return a.position < b.position end)
+        table.insert(ordered_colors, {color = color, position = group[1].position})
+    end
+    
+    table.sort(ordered_colors, function(a, b)
+        if a.position == b.position then return a.color < b.color end
+        return a.position < b.position
+    end)
+    
+    for _, entry in ipairs(ordered_colors) do
+        for _, item_data in ipairs(color_groups[entry.color]) do
+            table.insert(sorted_items, item_data.item)
+        end
+    end
+end
+
+local function append_items(list, sorted_items)
+    table.sort(list, function(a, b) return a.position < b.position end)
+    for _, item_data in ipairs(list) do
+        table.insert(sorted_items, item_data.item)
+    end
+end
+
 function process_track_items(items)
     -- Find the earliest item position on this track
     local first_position = nil
@@ -52,92 +94,30 @@ function process_track_items(items)
     
     -- Group items by color and mute state
     for _, item in ipairs(items) do
-        local color = reaper.GetMediaItemInfo_Value(item, "I_CUSTOMCOLOR")
+        local colored, color = HasCustomColor(item)
         local position = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
         local muted = reaper.GetMediaItemInfo_Value(item, "B_MUTE") == 1
         
-        if muted then
-            -- Handle muted items
-            if color == 0 then
-                table.insert(uncolored_items_muted, {item=item, position=position})
-            else
-                if not color_groups_muted[color] then
-                    color_groups_muted[color] = {}
-                end
-                table.insert(color_groups_muted[color], {item=item, position=position})
+        local color_groups = muted and color_groups_muted or color_groups_unmuted
+        local uncolored_items = muted and uncolored_items_muted or uncolored_items_unmuted
+        
+        if colored then
+            if not color_groups[color] then
+                color_groups[color] = {}
             end
+            table.insert(color_groups[color], {item=item, position=position})
         else
-            -- Handle unmuted items
-            if color == 0 then
-                table.insert(uncolored_items_unmuted, {item=item, position=position})
-            else
-                if not color_groups_unmuted[color] then
-                    color_groups_unmuted[color] = {}
-                end
-                table.insert(color_groups_unmuted[color], {item=item, position=position})
-            end
+            table.insert(uncolored_items, {item=item, position=position})
         end
     end
     
-    -- Create ordered arrays of colors for both unmuted and muted items
-    local sorted_unmuted_colors = {}
-    for color, _ in pairs(color_groups_unmuted) do
-        table.insert(sorted_unmuted_colors, color)
-    end
-    
-    local sorted_muted_colors = {}
-    for color, _ in pairs(color_groups_muted) do
-        table.insert(sorted_muted_colors, color)
-    end
-    
-    -- Build the final sorted list of items
+    -- Build the final sorted list of items:
+    -- 1. colored unmuted  2. uncolored unmuted  3. colored muted  4. uncolored muted
     local sorted_items = {}
-    
-    -- 1. First add all colored unmuted items
-    for _, color in ipairs(sorted_unmuted_colors) do
-        local group = color_groups_unmuted[color]
-        -- Sort items within the same color group by their original position
-        table.sort(group, function(a, b)
-            return a.position < b.position
-        end)
-        
-        -- Add sorted items to the final list
-        for _, item_data in ipairs(group) do
-            table.insert(sorted_items, item_data.item)
-        end
-    end
-    
-    -- 2. Then add all uncolored unmuted items
-    table.sort(uncolored_items_unmuted, function(a, b)
-        return a.position < b.position
-    end)
-    
-    for _, item_data in ipairs(uncolored_items_unmuted) do
-        table.insert(sorted_items, item_data.item)
-    end
-    
-    -- 3. Then add all colored muted items
-    for _, color in ipairs(sorted_muted_colors) do
-        local group = color_groups_muted[color]
-        -- Sort items within the same color group by their original position
-        table.sort(group, function(a, b)
-            return a.position < b.position
-        end)
-        
-        -- Add sorted items to the final list
-        for _, item_data in ipairs(group) do
-            table.insert(sorted_items, item_data.item)
-        end
-    end
-    
-    -- 4. Finally add all uncolored muted items
-    table.sort(uncolored_items_muted, function(a, b)
-        return a.position < b.position
-    end)
-    
-    for _, item_data in ipairs(uncolored_items_muted) do
-        table.insert(sorted_items, item_data.item)
-    end
+    append_color_groups(color_groups_unmuted, sorted_items)
+    append_items(uncolored_items_unmuted, sorted_items)
+    append_color_groups(color_groups_muted, sorted_items)
+    append_items(uncolored_items_muted, sorted_items)
     
     -- If no items to rearrange, exit
     if #sorted_items == 0 then return end

@@ -289,6 +289,42 @@ function GetTrackDepth(track)
   return depth
 end
 
+-- Deletes a track without breaking the folder structure of the tracks around it.
+-- A deleted track that closed one or more folders (negative I_FOLDERDEPTH) hands
+-- that closing depth to the track above it.
+-- If the track is a folder parent: with include_children, the whole folder
+-- (parent + all descendants) is deleted; otherwise nothing is deleted.
+-- Returns the number of tracks deleted.
+function DeleteTrackPreservingHierarchy(track, include_children)
+  if not track or not reaper.ValidatePtr(track, "MediaTrack*") then return 0 end
+  local first = reaper.GetMediaTrackInfo_Value(track, "IP_TRACKNUMBER") - 1
+  local last = first
+  local depth_sum = reaper.GetMediaTrackInfo_Value(track, "I_FOLDERDEPTH")
+
+  if depth_sum > 0 then
+    if not include_children then return 0 end
+    -- Walk down until the folder is closed; depth_sum ends as the net closing depth (<= 0)
+    local track_count = reaper.CountTracks(0)
+    while depth_sum > 0 and last < track_count - 1 do
+      last = last + 1
+      depth_sum = depth_sum + reaper.GetMediaTrackInfo_Value(reaper.GetTrack(0, last), "I_FOLDERDEPTH")
+    end
+    if depth_sum > 0 then depth_sum = 0 end -- unterminated folder at end of project
+  end
+
+  for i = last, first, -1 do
+    reaper.DeleteTrack(reaper.GetTrack(0, i))
+  end
+
+  if depth_sum < 0 and first > 0 then
+    local prev = reaper.GetTrack(0, first - 1)
+    local prev_depth = reaper.GetMediaTrackInfo_Value(prev, "I_FOLDERDEPTH")
+    reaper.SetMediaTrackInfo_Value(prev, "I_FOLDERDEPTH", prev_depth + depth_sum)
+  end
+
+  return last - first + 1
+end
+
 -- Item color as displayed (falls back to track/default color if the item has none).
 function GetItemDisplayedColor(item)
   return reaper.GetDisplayedMediaItemColor(item)
@@ -628,14 +664,14 @@ end
 
 -- SAVE INITIAL SELECTED ITEMS
 init_sel_items = {}
-local function SaveSelectedItems (table)
+function SaveSelectedItems (table)
   for i = 0, reaper.CountSelectedMediaItems(0)-1 do
     table[i+1] = reaper.GetSelectedMediaItem(0, i)
   end
 end
 
 -- RESTORE INITIAL SELECTED ITEMS
-local function RestoreSelectedItems (table)
+function RestoreSelectedItems (table)
   UnselectAllItems() -- Unselect all items
   for _, item in ipairs(table) do
     reaper.SetMediaItemSelected(item, true)
@@ -652,14 +688,14 @@ end
 
 -- SAVE INITIAL TRACKS SELECTION
 init_sel_tracks = {}
-local function SaveSelectedTracks (table)
+function SaveSelectedTracks (table)
   for i = 0, reaper.CountSelectedTracks(0)-1 do
     table[i+1] = reaper.GetSelectedTrack(0, i)
   end
 end
 
 -- RESTORE INITIAL TRACKS SELECTION
-local function RestoreSelectedTracks (table)
+function RestoreSelectedTracks (table)
   UnselectAllTracks()
   for _, track in ipairs(table) do
     reaper.SetTrackSelected(track, true)
@@ -702,6 +738,347 @@ function RestoreView()
   reaper.BR_SetArrangeView(0, start_time_view, end_time_view)
 end
 
--- <==== INITIAL SAVE AND RESTORE ----- 
+-- <==== INITIAL SAVE AND RESTORE -----
+
+
+
+--||||||||||||||||||||||||||||||||||||||||||||||||||||||||||--
+-- --------------- Pitch Detection (aubio) ---------------- --
+--||||||||||||||||||||||||||||||||||||||||||||||||||||||||||--
+-- Requires the aubio command line tools, installed via X-Raym's ReaPack repo:
+--   https://github.com/X-Raym/Aubio-for-REAPER-Reapack
+-- We shell out to aubiopitch, which prints one "time_seconds midi_note" pair per
+-- analysis frame to stdout (0.000000 for unvoiced frames).
+
+-- Shared with X-Raym's "Define aubio path in ExtState" setup script so the two stay in sync.
+AUBIO_EXT_STATE_SECTION = "XRaym_AubioPath"
+AUBIO_EXT_STATE_KEY     = "aubio_exe_path"
+
+local AUBIO_IS_WIN = (reaper.GetOS() or ""):match("Win") ~= nil
+local AUBIO_SEP    = AUBIO_IS_WIN and "\\" or "/"
+
+-- Default aubiopitch invocation settings. Override per script by passing an options
+-- table to RunAubioPitch / GetItemPitch (see the USER CONFIG block of the sort scripts).
+AUBIO_DEFAULT_OPTS = {
+  method    = "yinfft",  -- -p  pitch algorithm: default|yinfft|yinfast|yin|mcomb|fcomb|schmitt
+  bufsize   = 2048,      -- -B  FFT window size in frames
+  hopsize   = 256,       -- -H  frames between analyses (smaller = finer time resolution)
+  silence   = -60,       -- -s  silence threshold in dB; frames below this are not analysed
+  tolerance = 0.3,       -- -l  yin/yinfft pitch tolerance, 0.1 to 0.7
+  trim_pct  = 0.10,      -- fraction dropped from each end before taking the median
+}
+
+local NOTE_NAMES = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"}
+
+-- Converts a floating point MIDI note number to a readable name.
+-- 60 -> "C4", 60.14 -> "C4 (+14 cents)". MIDI 60 is C4, hence the -1 on the octave.
+function MidiToNoteName(midi_float)
+  if not midi_float then return "n/a" end
+  local nearest = math.floor(midi_float + 0.5)
+  local cents   = math.floor((midi_float - nearest) * 100 + 0.5)
+  local octave  = math.floor(nearest / 12) - 1
+  local note    = NOTE_NAMES[(nearest % 12) + 1] or "?"
+  local result  = note .. octave
+  if cents ~= 0 then
+    result = result .. " (" .. (cents > 0 and "+" or "") .. cents .. " cents)"
+  end
+  return result
+end
+
+-- Median of a numeric array after discarding trim_pct (default 0.10) from each end.
+-- The trim is what makes pitch tracking usable for sorting: it throws away the octave
+-- errors and attack transients that would otherwise drag a plain mean off the real note.
+function TrimmedMedian(values, trim_pct)
+  local n = #values
+  if n == 0 then return nil end
+
+  local v = {}
+  for i = 1, n do v[i] = values[i] end
+  table.sort(v)
+
+  local cut = math.floor(n * (trim_pct or 0.10))
+  local lo, hi = 1 + cut, n - cut
+  if lo > hi then lo, hi = 1, n end  -- too few values to trim; use them all
+
+  local count = hi - lo + 1
+  local mid   = lo + math.floor(count / 2)
+  if count % 2 == 1 then
+    return v[mid]
+  else
+    return (v[mid - 1] + v[mid]) / 2
+  end
+end
+
+-- Looks for aubiopitch inside REAPER's UserPlugins folder, walking the version
+-- subfolders so a ReaPack update doesn't invalidate a stored path.
+-- Layout installed by ReaPack: UserPlugins/aubio/<version>/<platform>/aubiopitch[.exe]
+local function ProbeAubioExePath()
+  local root = reaper.GetResourcePath() .. AUBIO_SEP .. "UserPlugins" .. AUBIO_SEP .. "aubio"
+  local platforms = {"win64", "win32", "macos", "linux"}
+  local exe_names = {"aubiopitch.exe", "aubiopitch"}
+
+  local i = 0
+  while true do
+    local version = reaper.EnumerateSubdirectories(root, i)
+    if not version then break end
+    for _, platform in ipairs(platforms) do
+      for _, exe_name in ipairs(exe_names) do
+        local candidate = root .. AUBIO_SEP .. version .. AUBIO_SEP .. platform .. AUBIO_SEP .. exe_name
+        if reaper.file_exists(candidate) then return candidate end
+      end
+    end
+    i = i + 1
+  end
+  return nil
+end
+
+-- Resolves the aubiopitch executable: stored ExtState first, then an auto-probe of
+-- UserPlugins, then a file dialog as a last resort. Whatever resolves is persisted.
+-- Pass prompt_if_missing = false to skip the dialog (returns nil instead).
+function GetAubioExePath(prompt_if_missing)
+  local saved = reaper.GetExtState(AUBIO_EXT_STATE_SECTION, AUBIO_EXT_STATE_KEY)
+  if saved ~= "" and reaper.file_exists(saved) then
+    Log("aubio exe (ExtState):", saved)
+    return saved
+  end
+
+  local probed = ProbeAubioExePath()
+  if probed then
+    Log("aubio exe (auto-probed):", probed)
+    reaper.SetExtState(AUBIO_EXT_STATE_SECTION, AUBIO_EXT_STATE_KEY, probed, true)
+    return probed
+  end
+
+  if prompt_if_missing == false then return nil end
+
+  reaper.ShowMessageBox(
+    "aubio could not be found automatically.\n\n" ..
+    "Install it via ReaPack (X-Raym's Aubio-for-REAPER repository), or locate\n" ..
+    "aubiopitch yourself on the next screen. The path will be remembered.",
+    "Locate aubiopitch", 0)
+
+  local retval, path = reaper.GetUserFileNameForRead("", "Locate aubiopitch executable", "")
+  if not retval or not path or path == "" then return nil end
+
+  Log("aubio exe (user selected):", path)
+  reaper.SetExtState(AUBIO_EXT_STATE_SECTION, AUBIO_EXT_STATE_KEY, path, true)
+  return path
+end
+
+-- Pulls the "time midi" pairs out of whatever aubiopitch printed.
+-- A data line is exactly two numbers; ExecProcess prefixes its output with a lone
+-- exit code line, which fails that test and is skipped without special handling.
+-- Stored as two parallel flat arrays rather than a table per frame: a ten minute
+-- file at these settings is over 200,000 frames, where per-frame tables would cost
+-- well over 10 MB against roughly 2 MB this way.
+local function ParseAubioOutput(raw)
+  local d = { n = 0, t = {}, midi = {} }
+  if not raw then return d end
+  local n, ts, ms = 0, d.t, d.midi
+  for line in raw:gmatch("[^\r\n]+") do
+    local t, midi = line:match("^%s*(%-?[%d%.]+[eE]?[%-%+]?%d*)%s+(%-?[%d%.]+[eE]?[%-%+]?%d*)%s*$")
+    t, midi = tonumber(t), tonumber(midi)
+    if t and midi and midi > 0 then
+      n = n + 1
+      ts[n], ms[n] = t, midi
+    end
+  end
+  d.n = n
+  return d
+end
+
+-- Analysis results for source files already examined during this script run.
+-- aubiopitch always analyses the whole file, so every item cut from the same source
+-- shares one result set and only differs in which frames it windows out. Keyed by
+-- source path. This lives and dies with the Lua state REAPER creates per script run,
+-- so there is nothing to invalidate: a re-rendered file is re-analysed next time.
+local aubio_cache = {}
+
+-- Runs aubiopitch over an audio file and returns its per-frame pitch detections.
+-- Returns: detections, err (string or nil), raw_output (string).
+-- detections is { n = frame_count, t = {seconds...}, midi = {note_numbers...} },
+-- covering the whole source file -- see GetItemPitch for windowing it to one item.
+function RunAubioPitch(source_path, opts)
+  local o = opts or AUBIO_DEFAULT_OPTS
+
+  local cached = aubio_cache[source_path]
+  if cached then
+    Log(string.format("aubio cache hit (%d frames): %s", cached.n, source_path))
+    return cached, nil, ""
+  end
+
+  local exe = GetAubioExePath()
+  if not exe then
+    return nil, "No aubio executable available.", ""
+  end
+  if not reaper.file_exists(source_path) then
+    return nil, "Source file not found on disk:\n" .. tostring(source_path), ""
+  end
+
+  local args = string.format('-i "%s" -u midi -p %s -B %s -H %s -s %s -l %s',
+    source_path,
+    o.method    or AUBIO_DEFAULT_OPTS.method,
+    o.bufsize   or AUBIO_DEFAULT_OPTS.bufsize,
+    o.hopsize   or AUBIO_DEFAULT_OPTS.hopsize,
+    o.silence   or AUBIO_DEFAULT_OPTS.silence,
+    o.tolerance or AUBIO_DEFAULT_OPTS.tolerance)
+
+  local cmd = string.format('"%s" %s', exe, args)
+  Log("aubio command:", cmd)
+
+  -- ExecProcess timeout semantics: 0 = run to completion and capture output.
+  -- -1 means "no wait, then terminate", which returns Windows exit code 259
+  -- (STILL_ACTIVE) and no data at all -- a very easy trap to fall into.
+  local raw = reaper.ExecProcess(cmd, 0)
+  local detections = ParseAubioOutput(raw)
+
+  -- Fallback: some REAPER/OS combinations return only the exit code from ExecProcess.
+  -- Redirect stdout to a temp file through the shell and read it back ourselves.
+  if detections.n == 0 then
+    Log("aubio direct call returned no data lines. Raw output:", tostring(raw))
+    Log("Retrying via temp file redirection...")
+
+    local temp_path = reaper.GetResourcePath() .. AUBIO_SEP .. "jrope_aubio_out.txt"
+    local shell_cmd
+    if AUBIO_IS_WIN then
+      -- cmd.exe strips the outermost quote pair, so the whole line is wrapped again.
+      shell_cmd = string.format('cmd.exe /C ""%s" %s > "%s" 2>&1"', exe, args, temp_path)
+    else
+      shell_cmd = string.format('/bin/sh -c \'"%s" %s > "%s" 2>&1\'', exe, args, temp_path)
+    end
+    Log("aubio fallback command:", shell_cmd)
+    reaper.ExecProcess(shell_cmd, 0)
+
+    local file = io.open(temp_path, "r")
+    if file then
+      raw = file:read("*all")
+      file:close()
+      os.remove(temp_path)
+      detections = ParseAubioOutput(raw)
+    else
+      return nil, "aubio produced no output and the fallback temp file could not be read.", tostring(raw)
+    end
+  end
+
+  if detections.n == 0 then
+    return nil, "aubio returned no pitch data. Raw output:\n" .. tostring(raw), tostring(raw)
+  end
+
+  aubio_cache[source_path] = detections
+  Log(string.format("aubio analysed %d voiced frames, cached for this run: %s",
+    detections.n, source_path))
+
+  return detections, nil, raw
+end
+
+-- Detects the representative pitch of a single media item, in MIDI note numbers.
+-- aubio analyses the whole source file, but an item is usually a trimmed slice of it,
+-- so the detections are windowed to the part of the source the item actually plays.
+-- The take's own pitch shift (D_PITCH) is added, so a transposed item sorts where it sounds.
+-- Returns: midi_float, frame_count -- or nil, 0 when nothing pitched was found.
+function GetItemPitch(item, opts)
+  local o = opts or AUBIO_DEFAULT_OPTS
+
+  local take = reaper.GetActiveTake(item)
+  if not take or reaper.TakeIsMIDI(take) then return nil, 0 end
+
+  local source = reaper.GetMediaItemTake_Source(take)
+  if not source then return nil, 0 end
+
+  local source_path = reaper.GetMediaSourceFileName(source, "")
+  if not source_path or source_path == "" then return nil, 0 end
+
+  local detections, err = RunAubioPitch(source_path, o)
+  if err then
+    Log("aubio error for", source_path, "->", err)
+    return nil, 0
+  end
+
+  -- Window of the source file this item plays, in source seconds.
+  local offs = reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS")
+  local rate = reaper.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE")
+  local len  = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+  if rate <= 0 then rate = 1 end
+  local win_start, win_end = offs, offs + len * rate
+
+  local pitches, count = {}, 0
+  local ts, ms = detections.t, detections.midi
+  for i = 1, detections.n do
+    local t = ts[i]
+    if t >= win_start and t <= win_end then
+      count = count + 1
+      pitches[count] = ms[i]
+    end
+  end
+
+  Log(string.format("  window %.3f-%.3f s of source, %d voiced frames (of %d in file)",
+    win_start, win_end, count, detections.n))
+
+  if #pitches == 0 then return nil, 0 end
+
+  local median = TrimmedMedian(pitches, o.trim_pct or AUBIO_DEFAULT_OPTS.trim_pct)
+  if not median then return nil, 0 end
+
+  local take_pitch = reaper.GetMediaItemTakeInfo_Value(take, "D_PITCH")
+  if take_pitch ~= 0 then
+    Log(string.format("  applying take pitch offset of %+.2f semitones", take_pitch))
+    median = median + take_pitch
+  end
+
+  return median, #pitches
+end
+
+-- Analyses an array of media items and returns them as entries sorted by detected pitch.
+-- Entries: { item, position, length, pitch (nil if undetected), frames, name }
+-- Items with no detectable pitch always sort to the end, ordered by original position,
+-- regardless of the ascending flag -- they have no pitch to reverse.
+-- Returns: entries, pitched_count.
+function AnalyzeAndSortItemsByPitch(items, opts, ascending)
+  if ascending == nil then ascending = true end
+
+  local entries, pitched_count = {}, 0
+
+  for _, item in ipairs(items) do
+    local name = "(no source)"
+    local take = reaper.GetActiveTake(item)
+    if take then
+      local source = reaper.GetMediaItemTake_Source(take)
+      if source then
+        local path = reaper.GetMediaSourceFileName(source, "")
+        name = path:match("([^/\\]+)$") or path
+      end
+    end
+    Log("Analysing:", name)
+
+    local pitch, frames = GetItemPitch(item, opts)
+    if pitch then
+      pitched_count = pitched_count + 1
+      Log(string.format("  -> %s (MIDI %.2f) from %d frames", MidiToNoteName(pitch), pitch, frames))
+    else
+      Log("  -> no pitch detected")
+    end
+
+    entries[#entries + 1] = {
+      item     = item,
+      position = reaper.GetMediaItemInfo_Value(item, "D_POSITION"),
+      length   = reaper.GetMediaItemInfo_Value(item, "D_LENGTH"),
+      pitch    = pitch,
+      frames   = frames,
+      name     = name,
+    }
+  end
+
+  table.sort(entries, function(a, b)
+    if a.pitch and b.pitch then
+      if a.pitch == b.pitch then return a.position < b.position end
+      if ascending then return a.pitch < b.pitch else return a.pitch > b.pitch end
+    end
+    if a.pitch then return true end   -- pitched items always come before unpitched ones
+    if b.pitch then return false end
+    return a.position < b.position
+  end)
+
+  return entries, pitched_count
+end
 
 
